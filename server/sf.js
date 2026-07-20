@@ -21,7 +21,35 @@ export function assertComponentName(value) {
   return value;
 }
 
-export function runSf(args, { cwd = projectRoot } = {}) {
+// The sf CLI is memory-heavy (each invocation is its own Node process), and
+// this code fires off several in parallel (dependency scans, per-dependency
+// retrieve-name lookups). Unbounded concurrency was OOM-killing the 512MB
+// free-tier container, so cap how many sf processes can run at once
+// regardless of how much logical parallelism exists upstream.
+const MAX_CONCURRENT_SF = Number(process.env.SF_MAX_CONCURRENCY || 2);
+let activeSf = 0;
+const sfQueue = [];
+
+function runQueued(fn) {
+  return new Promise((resolve, reject) => {
+    const attempt = () => {
+      activeSf += 1;
+      fn().then(resolve, reject).finally(() => {
+        activeSf -= 1;
+        const next = sfQueue.shift();
+        if (next) next();
+      });
+    };
+    if (activeSf < MAX_CONCURRENT_SF) attempt();
+    else sfQueue.push(attempt);
+  });
+}
+
+export function runSf(args, options = {}) {
+  return runQueued(() => runSfNow(args, options));
+}
+
+function runSfNow(args, { cwd = projectRoot } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn("sf", [...args, "--json"], {
       cwd,
