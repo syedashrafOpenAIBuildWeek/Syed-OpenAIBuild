@@ -9,11 +9,21 @@ import { AppError } from "./errors.js";
 
 const execFileAsync = promisify(execFile);
 const AUTO_TYPES = new Set([
+  "ApexClass",
+  "ApexTrigger",
+  "AuraDefinitionBundle",
+  "CustomApplication",
+  "CustomPermission",
+  "EmailTemplate",
+  "Flow",
   "Layout",
   "ListView",
+  "PermissionSet",
+  "Profile",
   "Report",
   "ValidationRule",
-  "FlexiPage"
+  "FlexiPage",
+  "Workflow"
 ]);
 
 const quoteSoql = (value) =>
@@ -82,7 +92,10 @@ async function resolveRetrieveNames(rows) {
           )
         );
         found.forEach((item) =>
-          resolved.set(`${type}:${item.Id}`, `${item.SobjectType}.${item.DeveloperName}`)
+          resolved.set(
+            `${type}:${item.Id}`,
+            `${item.SobjectType}.${item.DeveloperName}`
+          )
         );
         return;
       }
@@ -91,10 +104,22 @@ async function resolveRetrieveNames(rows) {
       // time, in parallel.
       await Promise.all(
         ids.map(async (id) => {
-          const found = records(
-            await query(`SELECT Id, FullName FROM ${type} WHERE Id = ${quoteSoql(id)}`, true)
-          );
-          if (found.length) resolved.set(`${type}:${id}`, decodeURIComponent(found[0].FullName));
+          try {
+            const found = records(
+              await query(
+                `SELECT Id, FullName FROM ${type} WHERE Id = ${quoteSoql(id)}`,
+                true
+              )
+            );
+            if (found.length)
+              resolved.set(
+                `${type}:${id}`,
+                decodeURIComponent(found[0].FullName)
+              );
+          } catch {
+            // Unsupported Tooling API types remain visible as manual-review
+            // dependencies instead of hiding the dependencies we can edit.
+          }
         })
       );
     })
@@ -158,10 +183,22 @@ function targetFromField(objectApiName, field) {
 
 async function walk(dir) {
   const output = [];
+  const textExtensions = new Set([
+    ".cls",
+    ".cmp",
+    ".component",
+    ".css",
+    ".email",
+    ".html",
+    ".js",
+    ".page",
+    ".trigger",
+    ".xml"
+  ]);
   for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
     const file = path.join(dir, entry.name);
     if (entry.isDirectory()) output.push(...(await walk(file)));
-    else if (entry.name.endsWith(".xml")) output.push(file);
+    else if (textExtensions.has(path.extname(entry.name))) output.push(file);
   }
   return output;
 }
@@ -295,26 +332,29 @@ export async function buildPlan(command, intent) {
         // both forms rather than only the fully-qualified one.
         const relevant = actionable.filter((target) => {
           const bareName =
-            target.targetType === "field" ? target.fieldApiName : target.objectApiName;
-          return content.includes(target.fullName) || content.includes(bareName);
+            target.targetType === "field"
+              ? target.fieldApiName
+              : target.objectApiName;
+          return (
+            content.includes(target.fullName) || content.includes(bareName)
+          );
         });
         if (!relevant.length) return null;
-        let updatedContent = content;
-        const summaries = [];
-        for (const target of relevant) {
-          const edit = await removeReferences({
-            content: updatedContent,
-            fileName: path.relative(backupDir, file),
-            target: target.fullName
-          });
-          updatedContent = edit.updatedContent;
-          summaries.push(edit.summary);
-        }
+        const edit = await removeReferences({
+          content,
+          fileName: path.relative(backupDir, file),
+          targets: relevant.map((target) => target.fullName)
+        });
+        const updatedContent = edit.updatedContent;
         const output = path.join(workingDir, path.relative(backupDir, file));
         await fs.writeFile(output, updatedContent, "utf8");
         const diff = await makeDiff(file, output, run.dir);
         if (!diff) return null;
-        return { file: path.relative(backupDir, file), diff, summary: summaries.join(" ") };
+        return {
+          file: path.relative(backupDir, file),
+          diff,
+          summary: edit.summary
+        };
       })
     );
     diffs = perFile.filter(Boolean);

@@ -2,25 +2,31 @@ import { AppError } from "./errors.js";
 import { config } from "./config.js";
 
 async function structuredResponse(name, schema, instructions, input) {
-  if (!process.env.OPENAI_API_KEY) throw new AppError("OPENAI_API_KEY is not configured", 503);
+  if (!process.env.OPENAI_API_KEY)
+    throw new AppError("OPENAI_API_KEY is not configured", 503);
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
       model: config.model,
       instructions,
       input,
-      text: { format: { type: "json_schema", name, strict: true, schema } },
-    }),
+      text: { format: { type: "json_schema", name, strict: true, schema } }
+    })
   });
   const body = await response.json();
-  if (!response.ok) throw new AppError(body.error?.message || "OpenAI request failed", 502);
-  const text = body.output_text ??
-    body.output?.flatMap((item) => item.content || []).find((item) => item.type === "output_text")?.text;
-  if (!text) throw new AppError("OpenAI response contained no structured output", 502);
+  if (!response.ok)
+    throw new AppError(body.error?.message || "OpenAI request failed", 502);
+  const text =
+    body.output_text ??
+    body.output
+      ?.flatMap((item) => item.content || [])
+      .find((item) => item.type === "output_text")?.text;
+  if (!text)
+    throw new AppError("OpenAI response contained no structured output", 502);
   return JSON.parse(text);
 }
 
@@ -32,8 +38,8 @@ const intentSchema = {
     action: { type: "string", enum: ["delete"] },
     targetType: { type: "string", enum: ["field", "object"] },
     objectApiName: { type: "string" },
-    fieldApiNames: { type: "array", items: { type: "string" } },
-  },
+    fieldApiNames: { type: "array", items: { type: "string" } }
+  }
 };
 
 export function parseLiteralIntent(command) {
@@ -81,7 +87,7 @@ export function parseIntent(command) {
     "salesforce_delete_intent",
     intentSchema,
     "Extract a Salesforce deletion intent. Preserve API names exactly when supplied. For object deletion fieldApiNames must be empty. Reject ambiguity by returning the most literal interpretation; never invent multiple objects.",
-    command,
+    command
   );
 }
 
@@ -91,15 +97,15 @@ const editSchema = {
   required: ["updatedContent", "summary"],
   properties: {
     updatedContent: { type: "string" },
-    summary: { type: "string" },
-  },
+    summary: { type: "string" }
+  }
 };
 
-export function removeReferences({ content, fileName, target }) {
+export function removeReferences({ content, fileName, targets }) {
   return structuredResponse(
     "metadata_reference_removal",
     editSchema,
-    `Edit Salesforce metadata XML only. Remove every reference to ${target}. Keep all unrelated bytes and ordering as intact as possible. Return the complete valid file. Never add placeholders, comments, or unrelated cleanup.`,
-    `FILE: ${fileName}\n\n${content}`,
+    `Edit this Salesforce metadata or source file only. Remove every reference to these deletion targets: ${targets.join(", ")}. Preserve valid Salesforce semantics and keep all unrelated content and ordering as intact as possible. For Flow XML, remove or repair the complete owning element so no dangling connectors, assignments, input values, formulas, or field references remain. Return the complete valid file. Never add placeholders, comments, or unrelated cleanup.`,
+    `FILE: ${fileName}\n\n${content}`
   );
 }
