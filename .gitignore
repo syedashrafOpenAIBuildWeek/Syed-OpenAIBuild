@@ -49,4 +49,3 @@ $RECYCLE.BIN/
 **/__pycache__/
 **/.venv/
 **/venv/
-RENDER_AUTH_URL_PASTE_INTO_RENDER.txt

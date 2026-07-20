@@ -61,7 +61,7 @@ sf data update record --sobject CspTrustedSite --record-id "$CSP_ID" --values "E
 
 echo "Updating Home Page backend URL..."
 sf project retrieve start --target-org "$ORG" --metadata "FlexiPage:$FLEXIPAGE_NAME" --wait 30 > /dev/null 2>&1
-OLD_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.(trycloudflare|onrender)\.com' "$FLEXIPAGE_FILE" | head -1)
+OLD_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' "$FLEXIPAGE_FILE" | head -1)
 if [ -n "$OLD_URL" ]; then
   sed -i '' "s#$OLD_URL#$NEW_URL#" "$FLEXIPAGE_FILE"
 fi
