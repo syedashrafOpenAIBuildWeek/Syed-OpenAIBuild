@@ -100,26 +100,71 @@ function runSfNow(args, { cwd = projectRoot } = {}) {
   });
 }
 
-export const describe = (objectApiName) =>
-  runSf([
-    "sobject",
-    "describe",
-    "--target-org",
-    config.orgAlias,
-    "--sobject",
-    assertApiName(objectApiName)
-  ]);
+const SESSION_TTL_MS = Number(process.env.SF_SESSION_TTL_MS || 5 * 60 * 1000);
+let sessionPromise;
+let sessionExpiresAt = 0;
 
-export const query = (soql, tooling = false) =>
-  runSf([
-    "data",
-    "query",
-    "--target-org",
-    config.orgAlias,
-    ...(tooling ? ["--use-tooling-api"] : []),
-    "--query",
-    soql
-  ]);
+async function orgSession(forceRefresh = false) {
+  const now = Date.now();
+  if (forceRefresh || !sessionPromise || now >= sessionExpiresAt) {
+    sessionExpiresAt = now + SESSION_TTL_MS;
+    sessionPromise = runSf([
+      "org",
+      "display",
+      "--target-org",
+      config.orgAlias,
+      "--verbose"
+    ]).catch((error) => {
+      sessionPromise = undefined;
+      sessionExpiresAt = 0;
+      throw error;
+    });
+  }
+  return sessionPromise;
+}
+
+async function salesforceRequest(pathname, forceRefresh = false) {
+  const session = await orgSession(forceRefresh);
+  const response = await fetch(`${session.instanceUrl}${pathname}`, {
+    headers: {
+      Authorization: `Bearer ${session.accessToken}`,
+      Accept: "application/json"
+    }
+  });
+  if (response.status === 401 && !forceRefresh) {
+    return salesforceRequest(pathname, true);
+  }
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const details = Array.isArray(body) ? body[0] : body;
+    throw new AppError(
+      details?.message || `Salesforce API returned ${response.status}`,
+      502,
+      { status: response.status, errorCode: details?.errorCode }
+    );
+  }
+  return body;
+}
+
+// Planning performs many small reads. Calling the REST APIs through one
+// short-lived authenticated session avoids launching a new sf CLI process for
+// every query while preserving the CLI-backed deploy/delete safety path.
+export async function describe(objectApiName) {
+  const session = await orgSession();
+  return salesforceRequest(
+    `/services/data/v${session.apiVersion}/sobjects/${encodeURIComponent(
+      assertApiName(objectApiName)
+    )}/describe`
+  );
+}
+
+export async function query(soql, tooling = false) {
+  const session = await orgSession();
+  const api = tooling ? "tooling/query" : "query";
+  return salesforceRequest(
+    `/services/data/v${session.apiVersion}/${api}?q=${encodeURIComponent(soql)}`
+  );
+}
 
 export const deleteRecord = (sobject, recordId, tooling = false) =>
   runSf([

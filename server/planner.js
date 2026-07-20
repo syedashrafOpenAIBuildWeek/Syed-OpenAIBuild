@@ -6,6 +6,7 @@ import { assertApiName, describe, query, retrieve } from "./sf.js";
 import { removeReferences } from "./openai.js";
 import { createRun, persist } from "./store.js";
 import { AppError } from "./errors.js";
+import { snapshotMetadataFromWorkspace } from "./workspace.js";
 
 const execFileAsync = promisify(execFile);
 const AUTO_TYPES = new Set([
@@ -308,6 +309,46 @@ async function makeDiff(beforeFile, afterFile, root) {
   }
 }
 
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export function deterministicReferenceRemoval(content, fileName, targets) {
+  let updatedContent = content;
+  const normalizedFileName = `/${fileName.replaceAll("\\", "/")}`;
+  const wrappers = normalizedFileName.includes("/layouts/")
+    ? ["layoutItems"]
+    : normalizedFileName.includes("/flexipages/")
+      ? ["itemInstances"]
+      : normalizedFileName.includes("/flows/")
+        ? ["inputAssignments"]
+        : [];
+  if (!wrappers.length) return null;
+  for (const target of targets) {
+    const bareName = target.slice(target.lastIndexOf(".") + 1);
+    for (const wrapper of wrappers) {
+      const pattern = new RegExp(
+        `\\s*<${wrapper}>(?:(?!</${wrapper}>)[\\s\\S])*?(?:<field>${escapeRegExp(bareName)}</field>|(?:Record|\\$Record)\\.${escapeRegExp(bareName)})(?:(?!</${wrapper}>)[\\s\\S])*?</${wrapper}>`,
+        "g"
+      );
+      updatedContent = updatedContent.replace(pattern, "");
+    }
+    // Fall back to GPT whenever the known structural edit did not account for
+    // every occurrence. This keeps the fast path conservative.
+    if (
+      updatedContent.includes(target) ||
+      updatedContent.includes(`Record.${bareName}`) ||
+      updatedContent.includes(`$Record.${bareName}`) ||
+      updatedContent.includes(`<field>${bareName}</field>`)
+    ) {
+      return null;
+    }
+  }
+  if (updatedContent === content) return null;
+  return {
+    updatedContent,
+    summary: `Removed ${targets.join(", ")} from the owning Salesforce metadata element.`
+  };
+}
+
 export async function buildPlan(command, intent) {
   intent = normalizeIntent(intent);
   const object = await describe(intent.objectApiName);
@@ -431,18 +472,15 @@ export async function buildPlan(command, intent) {
   const metadataItems = [...metadata.values()];
   let diffs = [];
   if (metadataItems.length) {
-    await retrieve(metadataItems, backupDir);
+    const localSnapshot = await snapshotMetadataFromWorkspace(
+      metadataItems,
+      backupDir
+    );
+    if (!localSnapshot) await retrieve(metadataItems, backupDir);
     await fs.cp(backupDir, workingDir, { recursive: true });
-    // Different files are independent, so diff them concurrently rather than
-    // waiting on one GPT-5.6 call at a time. Edits to the *same* file from
-    // multiple targets still have to apply in sequence (each builds on the
-    // last one's output), so that inner loop stays sequential.
     const perFile = await Promise.all(
       (await walk(backupDir)).map(async (file) => {
         const content = await fs.readFile(file, "utf8");
-        // Layouts/validation rules/list views reference fields by their bare
-        // API name (e.g. "CurrentGenerators__c"), not "Object.Field" - check
-        // both forms rather than only the fully-qualified one.
         const relevant = actionable.filter((target) => {
           const bareName =
             target.targetType === "field"
@@ -453,24 +491,26 @@ export async function buildPlan(command, intent) {
           );
         });
         if (!relevant.length) return null;
-        const edit = await removeReferences({
-          content,
-          fileName: path.relative(backupDir, file),
-          targets: relevant.map((target) => target.fullName)
-        });
+        const fileName = path.relative(backupDir, file);
+        const targets = relevant.map((target) => target.fullName);
+        const edit =
+          deterministicReferenceRemoval(content, fileName, targets) ||
+          (await removeReferences({ content, fileName, targets }));
         const updatedContent = edit.updatedContent;
-        const output = path.join(workingDir, path.relative(backupDir, file));
+        const output = path.join(workingDir, fileName);
         await fs.writeFile(output, updatedContent, "utf8");
         const diff = await makeDiff(file, output, run.dir);
         if (!diff) return null;
         return {
-          file: path.relative(backupDir, file),
+          file: fileName,
           diff,
           summary: edit.summary
         };
       })
     );
     diffs = perFile.filter(Boolean);
+    run.localSnapshot = localSnapshot;
+    run.metadataItems = metadataItems;
   } else {
     await fs.mkdir(backupDir, { recursive: true });
     await fs.mkdir(workingDir, { recursive: true });

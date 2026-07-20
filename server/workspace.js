@@ -26,6 +26,63 @@ export async function findDefaultPackageDirectory(root = projectRoot) {
   }
 }
 
+const sourceType = {
+  FlexiPage: ["flexipages", ".flexipage-meta.xml"],
+  Flow: ["flows", ".flow-meta.xml"],
+  Layout: ["layouts", ".layout-meta.xml"]
+};
+
+export async function snapshotMetadataFromWorkspace(
+  metadataItems,
+  outputDir,
+  root = projectRoot
+) {
+  const metadataRoot = await findDefaultPackageDirectory(root);
+  if (!metadataRoot || !metadataItems.length) return false;
+  const selected = [];
+  for (const item of metadataItems) {
+    const mapping = sourceType[item.type];
+    if (!mapping) return false;
+    const [directory, suffix] = mapping;
+    const sourceDir = path.join(metadataRoot, directory);
+    let entries;
+    try {
+      entries = await fs.readdir(sourceDir);
+    } catch (error) {
+      if (error.code === "ENOENT") return false;
+      throw error;
+    }
+    const sourceNames =
+      item.type === "Flow"
+        ? [item.name, item.name.replace(/-\d+$/, "")]
+        : [item.name];
+    const entry = entries.find((name) => {
+      try {
+        return sourceNames.some(
+          (sourceName) => decodeURIComponent(name) === `${sourceName}${suffix}`
+        );
+      } catch {
+        return sourceNames.some(
+          (sourceName) => name === `${sourceName}${suffix}`
+        );
+      }
+    });
+    if (!entry) return false;
+    selected.push({
+      source: path.join(sourceDir, entry),
+      relative: path.join(directory, entry)
+    });
+  }
+  await Promise.all(
+    selected.map(async ({ source, relative }) => {
+      const destination = path.join(outputDir, relative);
+      await fs.mkdir(path.dirname(destination), { recursive: true });
+      await fs.copyFile(source, destination);
+    })
+  );
+  return true;
+}
+
 export async function syncDiffsToWorkspace(
   run,
   {

@@ -1,7 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { authorizeRun, persist } from "./store.js";
-import { deleteRecord, deployDestructive, deploySource, query } from "./sf.js";
+import {
+  deleteRecord,
+  deployDestructive,
+  deploySource,
+  query,
+  retrieve
+} from "./sf.js";
 import { destructiveManifests } from "./xml.js";
 import { syncDiffsToWorkspace } from "./workspace.js";
 import { AppError } from "./errors.js";
@@ -18,6 +24,26 @@ async function hasFiles(dir) {
       return true;
   }
   return false;
+}
+
+async function verifyLocalSnapshot(run) {
+  if (!run.localSnapshot) return;
+  const freshDir = path.join(run.dir, "approval-backup");
+  await retrieve(run.metadataItems, freshDir);
+  for (const item of run.diffs || []) {
+    const [reviewed, current] = await Promise.all([
+      fs.readFile(path.join(run.backupDir, item.file)),
+      fs.readFile(path.join(freshDir, item.file))
+    ]);
+    if (!reviewed.equals(current)) {
+      throw new AppError(
+        `Metadata changed in Salesforce after the local review snapshot (${item.file}); analyze again`,
+        409
+      );
+    }
+  }
+  await fs.rm(run.backupDir, { recursive: true, force: true });
+  await fs.rename(freshDir, run.backupDir);
 }
 
 async function removeSupersededFlowVersions(run) {
@@ -58,6 +84,7 @@ export async function approve(id, token) {
   run.state = "executing";
   await persist(run);
   try {
+    await verifyLocalSnapshot(run);
     let validation = { skipped: true, reason: "No dependency fixes required" };
     let fixDeploy = { skipped: true, reason: "No dependency fixes required" };
     if (await hasFiles(run.workingDir)) {
