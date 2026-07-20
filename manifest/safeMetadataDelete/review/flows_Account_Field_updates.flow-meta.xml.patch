@@ -1,17 +1,17 @@
-Removed the input assignment that updated Account.UpsellOpportunity__c; all unrelated Flow metadata was preserved.
+Removed the complete input assignment that referenced Account.SLAExpirationDate__c. All unrelated Flow metadata and ordering were preserved.
 
 --- before/backup/flows/Account_Field_updates.flow-meta.xml
 +++ after/working/flows/Account_Field_updates.flow-meta.xml
-@@ -53,12 +53,6 @@
-                 <stringValue>Gold</stringValue>
+@@ -36,12 +36,6 @@
              </value>
          </inputAssignments>
--        <inputAssignments>
--            <field>UpsellOpportunity__c</field>
+         <inputAssignments>
+-            <field>SLAExpirationDate__c</field>
 -            <value>
--                <stringValue>Yes</stringValue>
+-                <elementReference>$Record.SystemModstamp</elementReference>
 -            </value>
 -        </inputAssignments>
-         <inputReference>$Record</inputReference>
-     </recordUpdates>
-     <start>
+-        <inputAssignments>
+             <field>SLASerialNumber__c</field>
+             <value>
+                 <elementReference>$Record.SLASerialNumber__c</elementReference>

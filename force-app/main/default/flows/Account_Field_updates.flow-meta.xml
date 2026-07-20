@@ -36,12 +36,6 @@
             </value>
         </inputAssignments>
         <inputAssignments>
-            <field>SLAExpirationDate__c</field>
-            <value>
-                <elementReference>$Record.SystemModstamp</elementReference>
-            </value>
-        </inputAssignments>
-        <inputAssignments>
             <field>SLASerialNumber__c</field>
             <value>
                 <elementReference>$Record.SLASerialNumber__c</elementReference>

@@ -1,19 +1,19 @@
-Removed the layout item referencing Account.UpsellOpportunity__c.
+Removed the layout item referencing Account.SLAExpirationDate__c; all unrelated metadata and ordering were preserved.
 
 --- before/backup/layouts/Account-Account %28Sales%29 Layout.layout-meta.xml
 +++ after/working/layouts/Account-Account %28Sales%29 Layout.layout-meta.xml
-@@ -48,10 +48,6 @@
-             <layoutItems>
-                 <behavior>Required</behavior>
-                 <field>Active__c</field>
--            </layoutItems>
--            <layoutItems>
--                <behavior>Edit</behavior>
--                <field>UpsellOpportunity__c</field>
-             </layoutItems>
+@@ -112,10 +112,6 @@
              <layoutItems>
                  <behavior>Edit</behavior>
-@@ -430,4 +426,4 @@
+                 <field>CustomerPriority__c</field>
+-            </layoutItems>
+-            <layoutItems>
+-                <behavior>Required</behavior>
+-                <field>SLAExpirationDate__c</field>
+             </layoutItems>
+         </layoutColumns>
+         <layoutColumns>
+@@ -426,4 +422,4 @@
          <sizeY>0</sizeY>
          <summaryLayoutStyle>Default</summaryLayoutStyle>
      </summaryLayout>

@@ -1,13 +1,13 @@
-Removed the complete field item instance referencing Account.UpsellOpportunity__c; all unrelated FlexiPage content and ordering were preserved.
+Removed the complete field item instance referencing Account.SLAExpirationDate__c; all unrelated FlexiPage metadata remains unchanged.
 
 --- before/backup/flexipages/Person_Account.flexipage-meta.xml
 +++ after/working/flexipages/Person_Account.flexipage-meta.xml
-@@ -85,16 +85,6 @@
+@@ -61,16 +61,6 @@
                      <name>uiBehavior</name>
                      <value>none</value>
                  </fieldInstanceProperties>
--                <fieldItem>Record.UpsellOpportunity__c</fieldItem>
--                <identifier>RecordUpsellOpportunity_cField</identifier>
+-                <fieldItem>Record.SLAExpirationDate__c</fieldItem>
+-                <identifier>RecordSLAExpirationDate_cField</identifier>
 -            </fieldInstance>
 -        </itemInstances>
 -        <itemInstances>
@@ -16,10 +16,10 @@ Removed the complete field item instance referencing Account.UpsellOpportunity__
 -                    <name>uiBehavior</name>
 -                    <value>none</value>
 -                </fieldInstanceProperties>
-                 <fieldItem>Record.SLA__c</fieldItem>
-                 <identifier>RecordSLA_cField</identifier>
+                 <fieldItem>Record.CustomerPriority__c</fieldItem>
+                 <identifier>RecordCustomerPriority_cField</identifier>
              </fieldInstance>
-@@ -200,4 +190,4 @@
+@@ -190,4 +180,4 @@
          </properties>
      </template>
      <type>RecordPage</type>
