@@ -62,6 +62,13 @@ export default class SafeMetadataDelete extends LightningElement {
       ...target,
       isObject: target.targetType === "object",
       hasFlowVersionCleanup: Boolean(target.flowVersionCleanup?.length),
+      flowVersionCleanup: (target.flowVersionCleanup || []).map((item) => ({
+        ...item,
+        key: item.id,
+        action: item.cleanupOnly
+          ? "Remove this superseded Flow version before deleting the field."
+          : "Activate the corrected Flow, then remove this superseded version before deleting the field."
+      })),
       manualReview: (target.manualReview || []).map((item) => ({
         ...item,
         key: `${item.type}:${item.name}`

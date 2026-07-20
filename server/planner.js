@@ -127,15 +127,22 @@ async function resolveRetrieveNames(rows) {
   return resolved;
 }
 
-function retrieveDependency(row, resolved) {
+function retrieveDependency(row, resolved, flowVersions) {
   const type = row.MetadataComponentType;
   const retrieveName = resolved.get(`${type}:${row.MetadataComponentId}`);
+  const flowVersion = flowVersions.get(row.MetadataComponentId);
   return {
     name: row.MetadataComponentName,
     type,
     componentId: row.MetadataComponentId,
     retrieveName: retrieveName || row.MetadataComponentName,
-    autoFixable: AUTO_TYPES.has(type) && Boolean(retrieveName)
+    autoFixable:
+      AUTO_TYPES.has(type) &&
+      Boolean(retrieveName) &&
+      (type !== "Flow" || Boolean(flowVersion)),
+    flowStatus: flowVersion?.Status,
+    flowVersionNumber: flowVersion?.VersionNumber,
+    cleanupOnly: type === "Flow" && flowVersion?.Status !== "Active"
   };
 }
 
@@ -145,8 +152,26 @@ async function dependencies(fullName, targetType) {
     "SELECT MetadataComponentId, MetadataComponentName, MetadataComponentType " +
     `FROM MetadataComponentDependency WHERE RefMetadataComponentId = ${quoteSoql(componentId)}`;
   const rows = records(await query(soql, true));
-  const resolved = await resolveRetrieveNames(rows);
-  return rows.map((row) => retrieveDependency(row, resolved));
+  const [resolved, flowVersionRows] = await Promise.all([
+    resolveRetrieveNames(rows),
+    Promise.all(
+      rows
+        .filter((row) => row.MetadataComponentType === "Flow")
+        .map(async (row) => {
+          const found = records(
+            await query(
+              `SELECT Id, Status, VersionNumber FROM Flow WHERE Id = ${quoteSoql(row.MetadataComponentId)}`,
+              true
+            )
+          )[0];
+          return found;
+        })
+    )
+  ]);
+  const flowVersions = new Map(
+    flowVersionRows.filter(Boolean).map((item) => [item.Id, item])
+  );
+  return rows.map((row) => retrieveDependency(row, resolved, flowVersions));
 }
 
 async function incomingRelationships(objectApiName, deps) {
@@ -289,7 +314,13 @@ export async function buildPlan(command, intent) {
         dependencies: deps,
         flowVersionCleanup: deps
           .filter((dep) => dep.type === "Flow")
-          .map((dep) => ({ id: dep.componentId, name: dep.name })),
+          .map((dep) => ({
+            id: dep.componentId,
+            name: dep.name,
+            status: dep.flowStatus,
+            versionNumber: dep.flowVersionNumber,
+            cleanupOnly: dep.cleanupOnly
+          })),
         manualReview: manual,
         incomingRelationships: relationships,
         recordCount,
@@ -301,7 +332,7 @@ export async function buildPlan(command, intent) {
   for (const target of planned) {
     if (target.hardBlocked) continue;
     target.dependencies
-      .filter((dep) => dep.autoFixable)
+      .filter((dep) => dep.autoFixable && !dep.cleanupOnly)
       .forEach((dep) =>
         metadata.set(`${dep.type}:${dep.retrieveName}`, {
           type: dep.type,

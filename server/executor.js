@@ -64,7 +64,26 @@ export async function approve(id, token) {
       validation = await deploySource(run.workingDir, true);
       fixDeploy = await deploySource(run.workingDir, false);
     }
-    Object.assign(run, { validation, fixDeploy });
+    let dependencyWorkspaceSync;
+    try {
+      dependencyWorkspaceSync = await syncDiffsToWorkspace(run, {
+        includeDeletion: false
+      });
+    } catch (error) {
+      dependencyWorkspaceSync = {
+        connected: true,
+        synced: [],
+        deleted: [],
+        manifests: [],
+        skipped: [],
+        error: error.message
+      };
+    }
+    Object.assign(run, {
+      validation,
+      fixDeploy,
+      workspaceSync: dependencyWorkspaceSync
+    });
     await persist(run);
     const removedFlowVersions = await removeSupersededFlowVersions(run);
     run.removedFlowVersions = removedFlowVersions;
@@ -79,7 +98,23 @@ export async function approve(id, token) {
     const deletion = await deployDestructive(packageXml, destructiveXml);
     let workspaceSync;
     try {
-      workspaceSync = await syncDiffsToWorkspace(run, { manifests });
+      const finalSync = await syncDiffsToWorkspace(run, {
+        manifests,
+        includeDiffs: false
+      });
+      workspaceSync = {
+        connected: dependencyWorkspaceSync.connected || finalSync.connected,
+        synced: dependencyWorkspaceSync.synced || [],
+        deleted: finalSync.deleted || [],
+        manifests: finalSync.manifests || [],
+        skipped: [
+          ...(dependencyWorkspaceSync.skipped || []),
+          ...(finalSync.skipped || [])
+        ],
+        ...(dependencyWorkspaceSync.error
+          ? { error: dependencyWorkspaceSync.error }
+          : {})
+      };
     } catch (error) {
       workspaceSync = {
         connected: true,

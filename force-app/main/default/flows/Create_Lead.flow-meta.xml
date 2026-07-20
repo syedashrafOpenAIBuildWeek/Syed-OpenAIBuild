@@ -1,7 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
     <actionCalls>
-        <description>Applies lead assignment rules to the newly created lead record.</description>
+        <description
+    >Applies lead assignment rules to the newly created lead record.</description>
         <name>Apply_Lead_Assignment_Rules</name>
         <label>Apply Lead Assignment Rules</label>
         <locationX>0</locationX>
@@ -22,7 +23,8 @@
     <apiVersion>67.0</apiVersion>
     <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
     <assignments>
-        <description>Assigns the newly created lead record ID to the output variable.</description>
+        <description
+    >Assigns the newly created lead record ID to the output variable.</description>
         <name>Set_Lead_Record_ID</name>
         <label>Set Lead Record ID</label>
         <locationX>0</locationX>
@@ -39,7 +41,8 @@
         </connector>
     </assignments>
     <decisions>
-        <description>Determines if a lead record exists based on the information passed into the flow.</description>
+        <description
+    >Determines if a lead record exists based on the information passed into the flow.</description>
         <name>Does_Lead_Exist</name>
         <label>Does Lead Exist</label>
         <locationX>0</locationX>
@@ -79,7 +82,8 @@
     </processMetadataValues>
     <processType>AutoLaunchedFlow</processType>
     <recordCreates>
-        <description>Creates a lead record using the information passed into the flow if a matching lead record doesn’t exist.</description>
+        <description
+    >Creates a lead record using the information passed into the flow if a matching lead record doesn’t exist.</description>
         <name>Create_Lead_Record</name>
         <label>Create Lead Record</label>
         <locationX>0</locationX>
@@ -90,12 +94,14 @@
         <inputReference>leadRecord</inputReference>
     </recordCreates>
     <recordLookups>
-        <description>Gets the lead record based on the information passed into the flow, if one exists.</description>
+        <description
+    >Gets the lead record based on the information passed into the flow, if one exists.</description>
         <name>Get_Lead_Record</name>
         <label>Get Lead Record</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
-        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <assignNullValuesIfNoRecordsFound
+    >true</assignNullValuesIfNoRecordsFound>
         <connector>
             <targetReference>Does_Lead_Exist</targetReference>
         </connector>
@@ -121,13 +127,6 @@
                 <elementReference>leadRecord.Company</elementReference>
             </value>
         </filters>
-        <filters>
-            <field>Safe_Test__c</field>
-            <operator>EqualTo</operator>
-            <value>
-                <stringValue>Create</stringValue>
-            </value>
-        </filters>
         <object>Lead</object>
         <outputAssignments>
             <assignToReference>leadRecordId</assignToReference>
@@ -143,7 +142,8 @@
     </start>
     <status>Active</status>
     <variables>
-        <description>Stores the lead record details to retrieve or create.</description>
+        <description
+    >Stores the lead record details to retrieve or create.</description>
         <name>leadRecord</name>
         <dataType>SObject</dataType>
         <isCollection>false</isCollection>
@@ -152,7 +152,8 @@
         <objectType>Lead</objectType>
     </variables>
     <variables>
-        <description>Stores the ID of the lead record found or created.</description>
+        <description
+    >Stores the ID of the lead record found or created.</description>
         <name>leadRecordId</name>
         <dataType>String</dataType>
         <isCollection>false</isCollection>

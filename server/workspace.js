@@ -28,7 +28,12 @@ export async function findDefaultPackageDirectory(root = projectRoot) {
 
 export async function syncDiffsToWorkspace(
   run,
-  { root = projectRoot, manifests } = {}
+  {
+    root = projectRoot,
+    manifests,
+    includeDiffs = true,
+    includeDeletion = true
+  } = {}
 ) {
   const metadataRoot = await findDefaultPackageDirectory(root);
   if (!metadataRoot) {
@@ -44,7 +49,7 @@ export async function syncDiffsToWorkspace(
   const synced = [];
   const deleted = [];
   const skipped = [];
-  for (const item of run.diffs || []) {
+  for (const item of includeDiffs ? run.diffs || [] : []) {
     const relativeFile = item.file;
     const backupFile = path.join(run.backupDir, relativeFile);
     const workingFile = path.join(run.workingDir, relativeFile);
@@ -77,7 +82,7 @@ export async function syncDiffsToWorkspace(
     synced.push(path.relative(root, workspaceFile));
   }
 
-  for (const target of run.actionable || []) {
+  for (const target of includeDeletion ? run.actionable || [] : []) {
     if (target.targetType !== "field") {
       skipped.push({
         file: `objects/${target.objectApiName}`,

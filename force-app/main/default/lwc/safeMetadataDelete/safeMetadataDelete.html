@@ -92,11 +92,20 @@
                 </p></template
               >
               <template lwc:if={target.hasFlowVersionCleanup}>
-                <p class="warning slds-var-m-top_small">
-                  Corrected Flow metadata will be activated first. Superseded
-                  Flow version(s) that still reference this field will then be
-                  removed before the field deletion.
-                </p>
+                <div class="warning slds-var-m-top_small">
+                  <p class="slds-text-title_bold">
+                    Planned Flow version actions
+                  </p>
+                  <template
+                    for:each={target.flowVersionCleanup}
+                    for:item="item"
+                  >
+                    <p key={item.key}>
+                      {item.name} — version {item.versionNumber}
+                      ({item.status}): {item.action}
+                    </p>
+                  </template>
+                </div>
               </template>
               <template for:each={target.manualReview} for:item="dependency"
                 ><p key={dependency.key}>
@@ -126,16 +135,17 @@
           </template>
           <template lwc:if={hasNoDependencyDiffs}>
             <p class="slds-var-m-top_medium">
-              No dependency metadata changes are required. The deleted
-              field/object and destructive manifest will still be reflected in
-              the connected Salesforce project after approval succeeds.
+              No dependency file edits are required for this run. Review the
+              planned metadata actions above. The deleted field/object and
+              destructive manifest will still be reflected in the connected
+              Salesforce project after approval succeeds.
             </p>
           </template>
           <template lwc:if={canApprove}>
             <div class="approval slds-var-m-top_large">
               <lightning-input
                 type="checkbox"
-                label="I reviewed the warnings and diffs and approve the destructive operation."
+                label="I reviewed the warnings, diffs, and planned metadata actions and approve the destructive operation."
                 checked={approvalChecked}
                 onchange={handleApprovalCheck}
               ></lightning-input>
