@@ -1,0 +1,11 @@
+node_modules
+.git
+.env
+.env.example
+RENDER_AUTH_URL_PASTE_INTO_RENDER.txt
+.safe-delete
+force-app
+.vscode
+.husky
+.codex
+*.md
