@@ -188,7 +188,13 @@ export async function rollback(id, token) {
   run.state = "rolling_back";
   await persist(run);
   try {
-    const rollback = await deploySource(run.backupDir, false);
+    const rollback = {};
+    if (await hasFiles(run.backupDir)) {
+      rollback.dependencies = await deploySource(run.backupDir, false);
+    }
+    if (run.targetBackupDir && (await hasFiles(run.targetBackupDir))) {
+      rollback.target = await deploySource(run.targetBackupDir, false);
+    }
     Object.assign(run, { state: "rolled_back", rollback });
     await persist(run);
     return { status: run.state, rollback };

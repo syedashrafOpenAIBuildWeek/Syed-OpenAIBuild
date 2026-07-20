@@ -64,6 +64,7 @@ export default class SafeMetadataDelete extends LightningElement {
     return (this.plan?.targets || []).map((target) => ({
       ...target,
       isObject: target.targetType === "object",
+      hasDeletionFiles: Boolean(target.deletionFiles?.length),
       hasFlowVersionCleanup: Boolean(target.flowVersionCleanup?.length),
       flowVersionCleanup: (target.flowVersionCleanup || []).map((item) => ({
         ...item,

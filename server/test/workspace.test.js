@@ -175,3 +175,39 @@ test("removes a deleted field and writes destructive manifests", async (t) => {
     /Lead\.TestCheckbox__c/
   );
 });
+
+test("removes the complete source directory for a deleted object", async (t) => {
+  const run = await fixture();
+  t.after(() => fs.rm(run.root, { recursive: true, force: true }));
+  const objectDir = path.join(
+    run.root,
+    "force-app/main/default/objects/Safe_Account__c"
+  );
+  await fs.mkdir(path.join(objectDir, "listViews"), { recursive: true });
+  await fs.writeFile(
+    path.join(objectDir, "Safe_Account__c.object-meta.xml"),
+    "object"
+  );
+  await fs.writeFile(
+    path.join(objectDir, "listViews/All.listView-meta.xml"),
+    "list view"
+  );
+  run.actionable = [
+    {
+      targetType: "object",
+      objectApiName: "Safe_Account__c",
+      fullName: "Safe_Account__c"
+    }
+  ];
+
+  const result = await syncDiffsToWorkspace(run, {
+    root: run.root,
+    includeDiffs: false
+  });
+
+  await assert.rejects(fs.access(objectDir));
+  assert.deepEqual(result.deleted.sort(), [
+    "force-app/main/default/objects/Safe_Account__c/Safe_Account__c.object-meta.xml",
+    "force-app/main/default/objects/Safe_Account__c/listViews/All.listView-meta.xml"
+  ]);
+});

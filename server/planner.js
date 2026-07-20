@@ -469,6 +469,26 @@ export async function buildPlan(command, intent) {
 
   const backupDir = path.join(run.dir, "backup");
   const workingDir = path.join(run.dir, "working");
+  const targetBackupDir = path.join(run.dir, "target-backup");
+  const targetMetadataItems = actionable.map((target) => ({
+    type: target.targetType === "field" ? "CustomField" : "CustomObject",
+    name:
+      target.targetType === "field"
+        ? `${target.objectApiName}.${target.fieldApiName}`
+        : target.objectApiName
+  }));
+  await retrieve(targetMetadataItems, targetBackupDir);
+  const targetBackupFiles = await walk(targetBackupDir);
+  for (const target of planned) {
+    target.deletionFiles = targetBackupFiles
+      .map((file) => path.relative(targetBackupDir, file))
+      .filter((file) =>
+        target.targetType === "object"
+          ? file.startsWith(`objects/${target.objectApiName}/`)
+          : file ===
+            `objects/${target.objectApiName}/fields/${target.fieldApiName}.field-meta.xml`
+      );
+  }
   const metadataItems = [...metadata.values()];
   let diffs = [];
   if (metadataItems.length) {
@@ -522,6 +542,7 @@ export async function buildPlan(command, intent) {
     actionable,
     backupDir,
     workingDir,
+    targetBackupDir,
     diffs
   });
   await persist(run);

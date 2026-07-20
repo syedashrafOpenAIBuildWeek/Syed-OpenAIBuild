@@ -11,6 +11,23 @@ async function readFile(file) {
   }
 }
 
+async function listFiles(dir) {
+  const output = [];
+  let entries;
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === "ENOENT") return output;
+    throw error;
+  }
+  for (const entry of entries) {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) output.push(...(await listFiles(file)));
+    else output.push(file);
+  }
+  return output;
+}
+
 export async function findDefaultPackageDirectory(root = projectRoot) {
   try {
     const project = JSON.parse(
@@ -157,12 +174,15 @@ export async function syncDiffsToWorkspace(
   }
 
   for (const target of includeDeletion ? run.actionable || [] : []) {
-    if (target.targetType !== "field") {
-      skipped.push({
-        file: `objects/${target.objectApiName}`,
-        reason:
-          "Object source directories are not removed automatically; use the generated destructive manifest"
-      });
+    if (target.targetType === "object") {
+      const objectDir = path.join(
+        metadataRoot,
+        "objects",
+        target.objectApiName
+      );
+      const files = await listFiles(objectDir);
+      await fs.rm(objectDir, { recursive: true, force: true });
+      deleted.push(...files.map((file) => path.relative(root, file)));
       continue;
     }
     const relativeFile = path.join(

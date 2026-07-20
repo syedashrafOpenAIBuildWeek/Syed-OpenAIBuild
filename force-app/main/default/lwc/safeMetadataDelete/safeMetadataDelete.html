@@ -123,6 +123,16 @@
                   Deleting this object deletes {target.recordCount} records.
                 </p></template
               >
+              <template lwc:if={target.hasDeletionFiles}>
+                <div class="warning slds-var-m-top_small">
+                  <p class="slds-text-title_bold">
+                    Source files removed after successful deletion:
+                  </p>
+                  <template for:each={target.deletionFiles} for:item="file">
+                    <p key={file}>{file}</p>
+                  </template>
+                </div>
+              </template>
               <template lwc:if={target.hardBlocked}
                 ><p class="danger">
                   Stopped: manual review or an incoming relationship is
