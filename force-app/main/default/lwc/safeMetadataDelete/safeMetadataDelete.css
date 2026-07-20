@@ -1,3 +1,23 @@
+.card-title {
+  align-items: center;
+  color: #032d60;
+  display: flex;
+  font-size: 1rem;
+  font-weight: 700;
+  gap: 0.625rem;
+}
+
+.title-icon {
+  align-items: center;
+  background: linear-gradient(135deg, #0b5cab, #1b96ff);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.125rem 0.25rem rgb(11 92 171 / 25%);
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+}
+
 .accent {
   background: linear-gradient(90deg, #0b5cab, #1b96ff 55%, #2e844a);
   height: 0.25rem;
