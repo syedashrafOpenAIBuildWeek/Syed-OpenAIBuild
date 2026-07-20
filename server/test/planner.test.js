@@ -44,12 +44,17 @@ test("removes only the matching layout item on the deterministic fast path", () 
 
 test("discovers layouts and flexipages owned by a custom object", async () => {
   const query = async (soql) => {
-    if (soql.includes("FROM Layout WHERE TableEnumOrId")) {
+    if (soql.includes("FROM CustomObject WHERE DeveloperName")) {
+      return { records: [{ Id: "01I-object" }] };
+    }
+    if (soql.includes("FROM Layout WHERE TableEnumOrId IN")) {
+      assert.match(soql, /'Safe_Account__c','01I-object'/);
       return {
         records: [{ Id: "00h-layout", Name: "Safe Account Layout" }]
       };
     }
-    if (soql.includes("FROM FlexiPage WHERE EntityDefinitionId")) {
+    if (soql.includes("FROM FlexiPage WHERE EntityDefinitionId IN")) {
+      assert.match(soql, /'Safe_Account__c','01I-object'/);
       return {
         records: [
           {

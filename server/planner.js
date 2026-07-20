@@ -201,15 +201,19 @@ async function flexiPageDependencies(fullName, targetType, runQuery = query) {
 }
 
 export async function ownedObjectMetadata(objectApiName, runQuery = query) {
+  const objectId = await resolveComponentId(objectApiName, "object", runQuery);
+  const ownerIdentifiers = [...new Set([objectApiName, objectId])]
+    .map(quoteSoql)
+    .join(",");
   const [layouts, flexiPages] = await Promise.all([
     runQuery(
       "SELECT Id, Name, TableEnumOrId FROM Layout " +
-        `WHERE TableEnumOrId = ${quoteSoql(objectApiName)}`,
+        `WHERE TableEnumOrId IN (${ownerIdentifiers})`,
       true
     ).then(records),
     runQuery(
       "SELECT Id, DeveloperName, MasterLabel, Type, EntityDefinitionId " +
-        `FROM FlexiPage WHERE EntityDefinitionId = ${quoteSoql(objectApiName)}`,
+        `FROM FlexiPage WHERE EntityDefinitionId IN (${ownerIdentifiers})`,
       true
     ).then(records)
   ]);
