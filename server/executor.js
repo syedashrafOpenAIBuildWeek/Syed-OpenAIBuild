@@ -75,6 +75,8 @@ export async function approve(id, token) {
         synced: [],
         deleted: [],
         manifests: [],
+        alreadySatisfied: [],
+        reviewArtifacts: [],
         skipped: [],
         error: error.message
       };
@@ -107,6 +109,8 @@ export async function approve(id, token) {
         synced: dependencyWorkspaceSync.synced || [],
         deleted: finalSync.deleted || [],
         manifests: finalSync.manifests || [],
+        alreadySatisfied: dependencyWorkspaceSync.alreadySatisfied || [],
+        reviewArtifacts: finalSync.reviewArtifacts || [],
         skipped: [
           ...(dependencyWorkspaceSync.skipped || []),
           ...(finalSync.skipped || [])
@@ -121,6 +125,8 @@ export async function approve(id, token) {
         synced: [],
         deleted: [],
         manifests: [],
+        alreadySatisfied: [],
+        reviewArtifacts: [],
         skipped: [],
         error: error.message
       };

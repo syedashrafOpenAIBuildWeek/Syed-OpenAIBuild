@@ -42,12 +42,15 @@ export async function syncDiffsToWorkspace(
       synced: [],
       deleted: [],
       manifests: [],
+      alreadySatisfied: [],
+      reviewArtifacts: [],
       skipped: []
     };
   }
 
   const synced = [];
   const deleted = [];
+  const alreadySatisfied = [];
   const skipped = [];
   for (const item of includeDiffs ? run.diffs || [] : []) {
     const relativeFile = item.file;
@@ -70,6 +73,20 @@ export async function syncDiffsToWorkspace(
       backupContent &&
       !workspaceContent.equals(backupContent)
     ) {
+      const localText = workspaceContent.toString("utf8");
+      const stillReferencesTarget = (run.actionable || []).some((target) => {
+        const bareName =
+          target.targetType === "field"
+            ? target.fieldApiName
+            : target.objectApiName;
+        return (
+          localText.includes(target.fullName) || localText.includes(bareName)
+        );
+      });
+      if (!stillReferencesTarget) {
+        alreadySatisfied.push(path.relative(root, workspaceFile));
+        continue;
+      }
       skipped.push({
         file: relativeFile,
         reason: "Local file differs from the retrieved org version"
@@ -107,6 +124,7 @@ export async function syncDiffsToWorkspace(
   }
 
   const manifestFiles = [];
+  const reviewArtifacts = [];
   if (manifests) {
     const manifestDir = path.join(root, "manifest", "safeMetadataDelete");
     await fs.mkdir(manifestDir, { recursive: true });
@@ -118,6 +136,14 @@ export async function syncDiffsToWorkspace(
       await fs.writeFile(file, content, "utf8");
       manifestFiles.push(path.relative(root, file));
     }
+    const reviewDir = path.join(manifestDir, "review");
+    await fs.mkdir(reviewDir, { recursive: true });
+    for (const item of run.diffs || []) {
+      const artifactName = `${item.file.replaceAll(/[^A-Za-z0-9_.-]/g, "_")}.patch`;
+      const file = path.join(reviewDir, artifactName);
+      await fs.writeFile(file, `${item.summary}\n\n${item.diff}`, "utf8");
+      reviewArtifacts.push(path.relative(root, file));
+    }
   }
 
   return {
@@ -125,6 +151,8 @@ export async function syncDiffsToWorkspace(
     synced,
     deleted,
     manifests: manifestFiles,
+    alreadySatisfied,
+    reviewArtifacts,
     skipped
   };
 }

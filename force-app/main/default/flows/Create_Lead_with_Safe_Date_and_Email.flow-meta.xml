@@ -122,13 +122,6 @@
             </value>
         </filters>
         <filters>
-            <field>Safe_Date__c</field>
-            <operator>EqualTo</operator>
-            <value>
-                <elementReference>$System.OriginDateTime</elementReference>
-            </value>
-        </filters>
-        <filters>
             <field>Safe_Email__c</field>
             <operator>EqualTo</operator>
             <value>

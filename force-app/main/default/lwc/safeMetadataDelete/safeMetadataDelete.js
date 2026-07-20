@@ -32,13 +32,16 @@ export default class SafeMetadataDelete extends LightningElement {
   get hasWorkspaceSyncSkipped() {
     return Boolean(this.plan?.workspaceSync?.skipped?.length);
   }
+  get hasWorkspaceAlreadySatisfied() {
+    return Boolean(this.plan?.workspaceSync?.alreadySatisfied?.length);
+  }
   get hasNoDependencyDiffs() {
     return this.canApprove && !this.hasDiffs;
   }
   get workspaceSyncSummary() {
     const sync = this.plan?.workspaceSync;
     if (!sync) return "";
-    return `${sync.synced?.length || 0} dependency file(s) updated, ${sync.deleted?.length || 0} deleted metadata file(s) removed, and ${sync.manifests?.length || 0} destructive manifest file(s) written to the connected Salesforce project.`;
+    return `${sync.synced?.length || 0} dependency file(s) updated, ${sync.alreadySatisfied?.length || 0} local file(s) already satisfied the reviewed change, ${sync.deleted?.length || 0} deleted metadata file(s) removed, and ${sync.reviewArtifacts?.length || 0} review diff artifact(s) written to the connected Salesforce project.`;
   }
   get analyzeDisabled() {
     return this.busy || !this.command.trim();

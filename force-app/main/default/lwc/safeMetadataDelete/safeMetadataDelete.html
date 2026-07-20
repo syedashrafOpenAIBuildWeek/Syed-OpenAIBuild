@@ -75,6 +75,23 @@
                   </template>
                 </div>
               </template>
+              <template lwc:if={hasWorkspaceAlreadySatisfied}>
+                <div class="slds-var-m-top_small">
+                  <p class="slds-text-title_bold">
+                    Local files already satisfied the reviewed deletion:
+                  </p>
+                  <template
+                    for:each={plan.workspaceSync.alreadySatisfied}
+                    for:item="file"
+                  >
+                    <p key={file}>{file}</p>
+                  </template>
+                  <p>
+                    Exact unified diffs were saved under
+                    manifest/safeMetadataDelete/review for Source Control.
+                  </p>
+                </div>
+              </template>
             </div>
           </template>
           <template for:each={targetViews} for:item="target">

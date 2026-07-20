@@ -61,13 +61,55 @@ test("does not overwrite a locally modified metadata file", async (t) => {
     run.relativeFile
   );
   await fs.mkdir(path.dirname(localFile), { recursive: true });
-  await fs.writeFile(localFile, "local change");
+  await fs.writeFile(localFile, "local change Safe_Date__c");
+  run.actionable = [
+    {
+      targetType: "field",
+      objectApiName: "Lead",
+      fieldApiName: "Safe_Date__c",
+      fullName: "Lead.Safe_Date__c"
+    }
+  ];
 
   const result = await syncDiffsToWorkspace(run, { root: run.root });
 
   assert.equal(result.synced.length, 0);
   assert.equal(result.skipped.length, 1);
-  assert.equal(await fs.readFile(localFile, "utf8"), "local change");
+  assert.equal(
+    await fs.readFile(localFile, "utf8"),
+    "local change Safe_Date__c"
+  );
+});
+
+test("recognizes a divergent local file that already removed the target", async (t) => {
+  const run = await fixture();
+  t.after(() => fs.rm(run.root, { recursive: true, force: true }));
+  const localFile = path.join(
+    run.root,
+    "force-app/main/default",
+    run.relativeFile
+  );
+  await fs.mkdir(path.dirname(localFile), { recursive: true });
+  await fs.writeFile(localFile, "unrelated local content");
+  run.actionable = [
+    {
+      targetType: "field",
+      objectApiName: "Lead",
+      fieldApiName: "Safe_Date__c",
+      fullName: "Lead.Safe_Date__c"
+    }
+  ];
+
+  const result = await syncDiffsToWorkspace(run, {
+    root: run.root,
+    includeDeletion: false
+  });
+
+  assert.deepEqual(result.alreadySatisfied, [
+    "force-app/main/default/layouts/Account-Test.layout-meta.xml"
+  ]);
+  assert.equal(result.skipped.length, 0);
+  assert.equal(await fs.readFile(localFile, "utf8"), "unrelated local content");
 });
 
 test("keeps existing behavior outside a Salesforce project", async (t) => {
@@ -97,6 +139,8 @@ test("removes a deleted field and writes destructive manifests", async (t) => {
       fieldApiName: "TestCheckbox__c"
     }
   ];
+  run.diffs[0].summary = "Removed the field from the layout.";
+  run.diffs[0].diff = "--- before\n+++ after\n-old\n+new\n";
 
   const result = await syncDiffsToWorkspace(run, {
     root: run.root,
@@ -115,6 +159,11 @@ test("removes a deleted field and writes destructive manifests", async (t) => {
     "manifest/safeMetadataDelete/package.xml",
     "manifest/safeMetadataDelete/destructiveChangesPost.xml"
   ]);
+  assert.equal(result.reviewArtifacts.length, 1);
+  assert.match(
+    await fs.readFile(path.join(run.root, result.reviewArtifacts[0]), "utf8"),
+    /--- before/
+  );
   assert.match(
     await fs.readFile(
       path.join(
