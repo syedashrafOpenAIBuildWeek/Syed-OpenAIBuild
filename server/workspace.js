@@ -183,6 +183,23 @@ export async function syncDiffsToWorkspace(
       const files = await listFiles(objectDir);
       await fs.rm(objectDir, { recursive: true, force: true });
       deleted.push(...files.map((file) => path.relative(root, file)));
+      for (const relativeFile of target.deletionFiles || []) {
+        if (relativeFile.startsWith(`objects/${target.objectApiName}/`)) {
+          continue;
+        }
+        const workspaceFile = path.resolve(metadataRoot, relativeFile);
+        if (
+          !workspaceFile.startsWith(`${path.resolve(metadataRoot)}${path.sep}`)
+        ) {
+          continue;
+        }
+        try {
+          await fs.unlink(workspaceFile);
+          deleted.push(path.relative(root, workspaceFile));
+        } catch (error) {
+          if (error.code !== "ENOENT") throw error;
+        }
+      }
       continue;
     }
     const relativeFile = path.join(

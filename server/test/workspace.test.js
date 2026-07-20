@@ -192,11 +192,29 @@ test("removes the complete source directory for a deleted object", async (t) => 
     path.join(objectDir, "listViews/All.listView-meta.xml"),
     "list view"
   );
+  const layoutFile = path.join(
+    run.root,
+    "force-app/main/default/layouts/Safe_Account__c-Safe Account Layout.layout-meta.xml"
+  );
+  const flexiPageFile = path.join(
+    run.root,
+    "force-app/main/default/flexipages/Safe_Account_Record_Page.flexipage-meta.xml"
+  );
+  await fs.mkdir(path.dirname(layoutFile), { recursive: true });
+  await fs.mkdir(path.dirname(flexiPageFile), { recursive: true });
+  await fs.writeFile(layoutFile, "layout");
+  await fs.writeFile(flexiPageFile, "record page");
   run.actionable = [
     {
       targetType: "object",
       objectApiName: "Safe_Account__c",
-      fullName: "Safe_Account__c"
+      fullName: "Safe_Account__c",
+      deletionFiles: [
+        "objects/Safe_Account__c/Safe_Account__c.object-meta.xml",
+        "objects/Safe_Account__c/listViews/All.listView-meta.xml",
+        "layouts/Safe_Account__c-Safe Account Layout.layout-meta.xml",
+        "flexipages/Safe_Account_Record_Page.flexipage-meta.xml"
+      ]
     }
   ];
 
@@ -206,7 +224,11 @@ test("removes the complete source directory for a deleted object", async (t) => 
   });
 
   await assert.rejects(fs.access(objectDir));
+  await assert.rejects(fs.access(layoutFile));
+  await assert.rejects(fs.access(flexiPageFile));
   assert.deepEqual(result.deleted.sort(), [
+    "force-app/main/default/flexipages/Safe_Account_Record_Page.flexipage-meta.xml",
+    "force-app/main/default/layouts/Safe_Account__c-Safe Account Layout.layout-meta.xml",
     "force-app/main/default/objects/Safe_Account__c/Safe_Account__c.object-meta.xml",
     "force-app/main/default/objects/Safe_Account__c/listViews/All.listView-meta.xml"
   ]);

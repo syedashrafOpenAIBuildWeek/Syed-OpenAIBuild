@@ -200,6 +200,49 @@ async function flexiPageDependencies(fullName, targetType, runQuery = query) {
   return matches.filter(Boolean);
 }
 
+export async function ownedObjectMetadata(objectApiName, runQuery = query) {
+  const [layouts, flexiPages] = await Promise.all([
+    runQuery(
+      "SELECT Id, Name, TableEnumOrId FROM Layout " +
+        `WHERE TableEnumOrId = ${quoteSoql(objectApiName)}`,
+      true
+    ).then(records),
+    runQuery(
+      "SELECT Id, DeveloperName, MasterLabel, Type, EntityDefinitionId " +
+        `FROM FlexiPage WHERE EntityDefinitionId = ${quoteSoql(objectApiName)}`,
+      true
+    ).then(records)
+  ]);
+  const layoutRows = layouts.map((layout) => ({
+    MetadataComponentId: layout.Id,
+    MetadataComponentName: layout.Name,
+    MetadataComponentType: "Layout"
+  }));
+  const resolvedLayouts = await resolveRetrieveNames(layoutRows, runQuery);
+  return [
+    ...layoutRows.map((row) => ({
+      name: row.MetadataComponentName,
+      type: "Layout",
+      componentId: row.MetadataComponentId,
+      retrieveName:
+        resolvedLayouts.get(`Layout:${row.MetadataComponentId}`) ||
+        `${objectApiName}-${row.MetadataComponentName}`,
+      autoFixable: true,
+      ownedByTarget: true,
+      deleteWithTarget: true
+    })),
+    ...flexiPages.map((page) => ({
+      name: page.MasterLabel || page.DeveloperName,
+      type: "FlexiPage",
+      componentId: page.Id,
+      retrieveName: page.DeveloperName,
+      autoFixable: true,
+      ownedByTarget: true,
+      deleteWithTarget: true
+    }))
+  ];
+}
+
 async function dependencies(fullName, targetType, runQuery = query) {
   const componentId = await resolveComponentId(fullName, targetType, runQuery);
   const soql =
@@ -408,11 +451,17 @@ export async function buildPlan(command, intent) {
   // for no reason.
   const planned = await Promise.all(
     candidates.map(async (target) => {
-      const deps = await dependencies(
-        target.fullName,
-        target.targetType,
-        cachedQuery
+      const [foundDependencies, ownedMetadata] = await Promise.all([
+        dependencies(target.fullName, target.targetType, cachedQuery),
+        target.targetType === "object"
+          ? ownedObjectMetadata(target.objectApiName, cachedQuery)
+          : []
+      ]);
+      const depsById = new Map();
+      [...foundDependencies, ...ownedMetadata].forEach((dep) =>
+        depsById.set(`${dep.type}:${dep.componentId}`, dep)
       );
+      const deps = [...depsById.values()];
       const manual = deps.filter((dep) => !dep.autoFixable);
       let recordCount;
       let relationships = [];
@@ -431,6 +480,7 @@ export async function buildPlan(command, intent) {
       return {
         ...target,
         dependencies: deps,
+        ownedMetadata,
         flowVersionCleanup: deps
           .filter((dep) => dep.type === "Flow")
           .map((dep) => ({
@@ -451,7 +501,9 @@ export async function buildPlan(command, intent) {
   for (const target of planned) {
     if (target.hardBlocked) continue;
     target.dependencies
-      .filter((dep) => dep.autoFixable && !dep.cleanupOnly)
+      .filter(
+        (dep) => dep.autoFixable && !dep.cleanupOnly && !dep.deleteWithTarget
+      )
       .forEach((dep) =>
         metadata.set(`${dep.type}:${dep.retrieveName}`, {
           type: dep.type,
@@ -470,24 +522,54 @@ export async function buildPlan(command, intent) {
   const backupDir = path.join(run.dir, "backup");
   const workingDir = path.join(run.dir, "working");
   const targetBackupDir = path.join(run.dir, "target-backup");
-  const targetMetadataItems = actionable.map((target) => ({
-    type: target.targetType === "field" ? "CustomField" : "CustomObject",
-    name:
+  const targetMetadata = new Map();
+  actionable.forEach((target) => {
+    const type = target.targetType === "field" ? "CustomField" : "CustomObject";
+    const name =
       target.targetType === "field"
         ? `${target.objectApiName}.${target.fieldApiName}`
-        : target.objectApiName
-  }));
+        : target.objectApiName;
+    targetMetadata.set(`${type}:${name}`, { type, name });
+    (target.ownedMetadata || []).forEach((item) =>
+      targetMetadata.set(`${item.type}:${item.retrieveName}`, {
+        type: item.type,
+        name: item.retrieveName
+      })
+    );
+  });
+  const targetMetadataItems = [...targetMetadata.values()];
   await retrieve(targetMetadataItems, targetBackupDir);
   const targetBackupFiles = await walk(targetBackupDir);
   for (const target of planned) {
+    const ownedFiles = new Set(
+      (target.ownedMetadata || []).map((item) => {
+        const [directory, suffix] =
+          item.type === "Layout"
+            ? ["layouts", ".layout-meta.xml"]
+            : ["flexipages", ".flexipage-meta.xml"];
+        return `${directory}/${item.retrieveName}${suffix}`;
+      })
+    );
     target.deletionFiles = targetBackupFiles
       .map((file) => path.relative(targetBackupDir, file))
-      .filter((file) =>
-        target.targetType === "object"
-          ? file.startsWith(`objects/${target.objectApiName}/`)
-          : file ===
+      .filter((file) => {
+        if (
+          target.targetType === "field" &&
+          file ===
             `objects/${target.objectApiName}/fields/${target.fieldApiName}.field-meta.xml`
-      );
+        )
+          return true;
+        if (
+          target.targetType === "object" &&
+          file.startsWith(`objects/${target.objectApiName}/`)
+        )
+          return true;
+        try {
+          return ownedFiles.has(decodeURIComponent(file));
+        } catch {
+          return ownedFiles.has(file);
+        }
+      });
   }
   const metadataItems = [...metadata.values()];
   let diffs = [];
