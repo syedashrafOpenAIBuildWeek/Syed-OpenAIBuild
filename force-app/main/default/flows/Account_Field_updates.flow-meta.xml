@@ -41,6 +41,18 @@
                 <stringValue>Gold</stringValue>
             </value>
         </inputAssignments>
+        <inputAssignments>
+            <field>Safe_Number__c</field>
+            <value>
+                <elementReference>$Record.Safe_Number__c</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Safe_Percentage__c</field>
+            <value>
+                <elementReference>$Record.Safe_Percentage__c</elementReference>
+            </value>
+        </inputAssignments>
         <inputReference>$Record</inputReference>
     </recordUpdates>
     <start>

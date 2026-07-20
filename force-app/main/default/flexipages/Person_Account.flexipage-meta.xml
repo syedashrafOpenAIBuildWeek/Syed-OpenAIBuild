@@ -47,32 +47,14 @@
         </itemInstances>
         <itemInstances>
             <fieldInstance>
-                <fieldInstanceProperties>
-                    <name>uiBehavior</name>
-                    <value>none</value>
-                </fieldInstanceProperties>
-                <fieldItem>Record.Active__c</fieldItem>
-                <identifier>RecordActive_cField</identifier>
+                <fieldItem>Record.Safe_Percentage__c</fieldItem>
+                <identifier>RecordSafe_Percentage__cField</identifier>
             </fieldInstance>
         </itemInstances>
         <itemInstances>
             <fieldInstance>
-                <fieldInstanceProperties>
-                    <name>uiBehavior</name>
-                    <value>none</value>
-                </fieldInstanceProperties>
-                <fieldItem>Record.SLAExpirationDate__c</fieldItem>
-                <identifier>RecordSLAExpirationDate_cField</identifier>
-            </fieldInstance>
-        </itemInstances>
-        <itemInstances>
-            <fieldInstance>
-                <fieldInstanceProperties>
-                    <name>uiBehavior</name>
-                    <value>none</value>
-                </fieldInstanceProperties>
-                <fieldItem>Record.CustomerPriority__c</fieldItem>
-                <identifier>RecordCustomerPriority_cField</identifier>
+                <fieldItem>Record.Safe_Number__c</fieldItem>
+                <identifier>RecordSafe_Number__cField</identifier>
             </fieldInstance>
         </itemInstances>
         <name>Facet-bfd1ba90-c017-43e3-ac90-3e4794c312fa</name>
@@ -97,16 +79,6 @@
                 </fieldInstanceProperties>
                 <fieldItem>Record.SLASerialNumber__c</fieldItem>
                 <identifier>RecordSLASerialNumber_cField</identifier>
-            </fieldInstance>
-        </itemInstances>
-        <itemInstances>
-            <fieldInstance>
-                <fieldInstanceProperties>
-                    <name>uiBehavior</name>
-                    <value>none</value>
-                </fieldInstanceProperties>
-                <fieldItem>Record.NumberofLocations__c</fieldItem>
-                <identifier>RecordNumberofLocations_cField</identifier>
             </fieldInstance>
         </itemInstances>
         <name>Facet-654d0d87-cf57-456c-ba8b-4f4ee87e60b3</name>
