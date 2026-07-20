@@ -7,6 +7,9 @@
 .localdevserver/
 deploy-options.json
 
+# Codex local environment cache
+.codex/
+
 # LWC VSCode autocomplete
 **/lwc/jsconfig.json
 
