@@ -74,9 +74,20 @@ async function resolveComponentId(fullName, targetType) {
 // "Lead-Lead Layout"). Each metadata type resolves that qualifier differently.
 async function resolveRetrieveNames(rows) {
   const resolved = new Map();
+  rows
+    .filter((row) => row.ResolvedFullName)
+    .forEach((row) =>
+      resolved.set(
+        `${row.MetadataComponentType}:${row.MetadataComponentId}`,
+        row.ResolvedFullName
+      )
+    );
   const groups = new Map();
   rows
-    .filter((row) => AUTO_TYPES.has(row.MetadataComponentType))
+    .filter(
+      (row) =>
+        AUTO_TYPES.has(row.MetadataComponentType) && !row.ResolvedFullName
+    )
     .forEach((row) => {
       const typeRows = groups.get(row.MetadataComponentType) || [];
       typeRows.push(row);
@@ -146,12 +157,62 @@ function retrieveDependency(row, resolved, flowVersions) {
   };
 }
 
+export function flexiPageMetadataReferences(metadata, fieldApiName) {
+  const serialized = JSON.stringify(metadata || {});
+  return (
+    serialized.includes(`Record.${fieldApiName}`) ||
+    serialized.includes(`"${fieldApiName}"`)
+  );
+}
+
+async function flexiPageDependencies(fullName, targetType) {
+  if (targetType !== "field") return [];
+  const split = fullName.lastIndexOf(".");
+  const objectApiName = fullName.slice(0, split);
+  const fieldApiName = fullName.slice(split + 1);
+  const pages = records(
+    await query(
+      "SELECT Id, DeveloperName, MasterLabel, Type, EntityDefinitionId " +
+        `FROM FlexiPage WHERE EntityDefinitionId = ${quoteSoql(objectApiName)}`,
+      true
+    )
+  );
+  const matches = await Promise.all(
+    pages.map(async (page) => {
+      const found = records(
+        await query(
+          `SELECT Id, Metadata FROM FlexiPage WHERE Id = ${quoteSoql(page.Id)}`,
+          true
+        )
+      )[0];
+      if (!flexiPageMetadataReferences(found?.Metadata, fieldApiName)) {
+        return null;
+      }
+      return {
+        MetadataComponentId: page.Id,
+        MetadataComponentName: page.MasterLabel,
+        MetadataComponentType: "FlexiPage",
+        ResolvedFullName: page.DeveloperName
+      };
+    })
+  );
+  return matches.filter(Boolean);
+}
+
 async function dependencies(fullName, targetType) {
   const componentId = await resolveComponentId(fullName, targetType);
   const soql =
     "SELECT MetadataComponentId, MetadataComponentName, MetadataComponentType " +
     `FROM MetadataComponentDependency WHERE RefMetadataComponentId = ${quoteSoql(componentId)}`;
-  const rows = records(await query(soql, true));
+  const [standardRows, flexiPageRows] = await Promise.all([
+    query(soql, true).then(records),
+    flexiPageDependencies(fullName, targetType)
+  ]);
+  const rowsById = new Map();
+  [...standardRows, ...flexiPageRows].forEach((row) =>
+    rowsById.set(`${row.MetadataComponentType}:${row.MetadataComponentId}`, row)
+  );
+  const rows = [...rowsById.values()];
   const [resolved, flowVersionRows] = await Promise.all([
     resolveRetrieveNames(rows),
     Promise.all(

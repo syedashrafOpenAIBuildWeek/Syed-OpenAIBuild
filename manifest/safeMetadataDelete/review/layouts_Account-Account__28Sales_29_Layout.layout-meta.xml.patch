@@ -1,0 +1,22 @@
+Removed the layout item referencing Account.UpsellOpportunity__c.
+
+--- before/backup/layouts/Account-Account %28Sales%29 Layout.layout-meta.xml
++++ after/working/layouts/Account-Account %28Sales%29 Layout.layout-meta.xml
+@@ -48,10 +48,6 @@
+             <layoutItems>
+                 <behavior>Required</behavior>
+                 <field>Active__c</field>
+-            </layoutItems>
+-            <layoutItems>
+-                <behavior>Edit</behavior>
+-                <field>UpsellOpportunity__c</field>
+             </layoutItems>
+             <layoutItems>
+                 <behavior>Edit</behavior>
+@@ -430,4 +426,4 @@
+         <sizeY>0</sizeY>
+         <summaryLayoutStyle>Default</summaryLayoutStyle>
+     </summaryLayout>
+-</Layout>
++</Layout>
+\ No newline at end of file

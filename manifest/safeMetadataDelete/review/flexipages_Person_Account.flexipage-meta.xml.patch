@@ -1,0 +1,28 @@
+Removed the complete field item instance referencing Account.UpsellOpportunity__c; all unrelated FlexiPage content and ordering were preserved.
+
+--- before/backup/flexipages/Person_Account.flexipage-meta.xml
++++ after/working/flexipages/Person_Account.flexipage-meta.xml
+@@ -85,16 +85,6 @@
+                     <name>uiBehavior</name>
+                     <value>none</value>
+                 </fieldInstanceProperties>
+-                <fieldItem>Record.UpsellOpportunity__c</fieldItem>
+-                <identifier>RecordUpsellOpportunity_cField</identifier>
+-            </fieldInstance>
+-        </itemInstances>
+-        <itemInstances>
+-            <fieldInstance>
+-                <fieldInstanceProperties>
+-                    <name>uiBehavior</name>
+-                    <value>none</value>
+-                </fieldInstanceProperties>
+                 <fieldItem>Record.SLA__c</fieldItem>
+                 <identifier>RecordSLA_cField</identifier>
+             </fieldInstance>
+@@ -200,4 +190,4 @@
+         </properties>
+     </template>
+     <type>RecordPage</type>
+-</FlexiPage>
++</FlexiPage>
+\ No newline at end of file

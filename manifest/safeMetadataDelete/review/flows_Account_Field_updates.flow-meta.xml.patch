@@ -1,0 +1,17 @@
+Removed the input assignment that updated Account.UpsellOpportunity__c; all unrelated Flow metadata was preserved.
+
+--- before/backup/flows/Account_Field_updates.flow-meta.xml
++++ after/working/flows/Account_Field_updates.flow-meta.xml
+@@ -53,12 +53,6 @@
+                 <stringValue>Gold</stringValue>
+             </value>
+         </inputAssignments>
+-        <inputAssignments>
+-            <field>UpsellOpportunity__c</field>
+-            <value>
+-                <stringValue>Yes</stringValue>
+-            </value>
+-        </inputAssignments>
+         <inputReference>$Record</inputReference>
+     </recordUpdates>
+     <start>
