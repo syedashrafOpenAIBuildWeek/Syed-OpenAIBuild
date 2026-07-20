@@ -65,7 +65,7 @@ OLD_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' "$FLEXIPAGE_FILE
 if [ -n "$OLD_URL" ]; then
   sed -i '' "s#$OLD_URL#$NEW_URL#" "$FLEXIPAGE_FILE"
 fi
-sf project deploy start --source-dir force-app/main/default/flexipages --target-org "$ORG" > /dev/null 2>&1
+sf project deploy start --metadata "FlexiPage:$FLEXIPAGE_NAME" --target-org "$ORG" > /dev/null 2>&1
 
 git add force-app/main/default/flexipages/ > /dev/null 2>&1
 git commit -m "Auto-fix: point Home Page at fresh tunnel URL" > /dev/null 2>&1 || true
