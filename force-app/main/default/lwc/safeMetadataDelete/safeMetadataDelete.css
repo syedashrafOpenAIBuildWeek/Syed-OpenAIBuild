@@ -2,25 +2,25 @@
   align-items: center;
   color: #032d60;
   display: flex;
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 600;
   gap: 0.625rem;
 }
 
 .title-icon {
   align-items: center;
-  background: linear-gradient(135deg, #0b5cab, #1b96ff);
+  background: linear-gradient(135deg, #0b16ab, #1bffec);
   border-radius: 0.5rem;
   box-shadow: 0 0.125rem 0.25rem rgb(11 92 171 / 25%);
   display: inline-flex;
-  height: 2rem;
+  height: 2.5rem;
   justify-content: center;
-  width: 2rem;
+  width: 2.5rem;
 }
 
 .accent {
   background: linear-gradient(90deg, #0b5cab, #1b96ff 55%, #2e844a);
-  height: 0.25rem;
+  height: 0.15rem;
 }
 
 .intro {
