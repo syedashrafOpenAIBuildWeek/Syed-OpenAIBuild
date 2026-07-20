@@ -1,14 +1,14 @@
-Removed the complete input assignment that referenced Account.SLAExpirationDate__c. All unrelated Flow metadata and ordering were preserved.
+Removed the complete input assignment referencing Account.NumberofLocations__c while preserving the remaining flow structure and field updates.
 
 --- before/backup/flows/Account_Field_updates.flow-meta.xml
 +++ after/working/flows/Account_Field_updates.flow-meta.xml
-@@ -36,12 +36,6 @@
-             </value>
-         </inputAssignments>
+@@ -30,12 +30,6 @@
+         <locationX>0</locationX>
+         <locationY>0</locationY>
          <inputAssignments>
--            <field>SLAExpirationDate__c</field>
+-            <field>NumberofLocations__c</field>
 -            <value>
--                <elementReference>$Record.SystemModstamp</elementReference>
+-                <elementReference>$Record.NumberofLocations__c</elementReference>
 -            </value>
 -        </inputAssignments>
 -        <inputAssignments>

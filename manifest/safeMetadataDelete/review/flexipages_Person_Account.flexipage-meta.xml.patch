@@ -1,13 +1,19 @@
-Removed the complete field item instance referencing Account.SLAExpirationDate__c; all unrelated FlexiPage metadata remains unchanged.
+Removed the complete field item instances referencing Account.Active__c, Account.CustomerPriority__c, and Account.NumberofLocations__c.
 
 --- before/backup/flexipages/Person_Account.flexipage-meta.xml
 +++ after/working/flexipages/Person_Account.flexipage-meta.xml
-@@ -61,16 +61,6 @@
-                     <name>uiBehavior</name>
-                     <value>none</value>
-                 </fieldInstanceProperties>
--                <fieldItem>Record.SLAExpirationDate__c</fieldItem>
--                <identifier>RecordSLAExpirationDate_cField</identifier>
+@@ -45,26 +45,6 @@
+                 <identifier>RecordNameField</identifier>
+             </fieldInstance>
+         </itemInstances>
+-        <itemInstances>
+-            <fieldInstance>
+-                <fieldInstanceProperties>
+-                    <name>uiBehavior</name>
+-                    <value>none</value>
+-                </fieldInstanceProperties>
+-                <fieldItem>Record.Active__c</fieldItem>
+-                <identifier>RecordActive_cField</identifier>
 -            </fieldInstance>
 -        </itemInstances>
 -        <itemInstances>
@@ -16,10 +22,31 @@ Removed the complete field item instance referencing Account.SLAExpirationDate__
 -                    <name>uiBehavior</name>
 -                    <value>none</value>
 -                </fieldInstanceProperties>
-                 <fieldItem>Record.CustomerPriority__c</fieldItem>
-                 <identifier>RecordCustomerPriority_cField</identifier>
+-                <fieldItem>Record.CustomerPriority__c</fieldItem>
+-                <identifier>RecordCustomerPriority_cField</identifier>
+-            </fieldInstance>
+-        </itemInstances>
+         <name>Facet-bfd1ba90-c017-43e3-ac90-3e4794c312fa</name>
+         <type>Facet</type>
+     </flexiPageRegions>
+@@ -89,16 +69,6 @@
+                 <identifier>RecordSLASerialNumber_cField</identifier>
              </fieldInstance>
-@@ -190,4 +180,4 @@
+         </itemInstances>
+-        <itemInstances>
+-            <fieldInstance>
+-                <fieldInstanceProperties>
+-                    <name>uiBehavior</name>
+-                    <value>none</value>
+-                </fieldInstanceProperties>
+-                <fieldItem>Record.NumberofLocations__c</fieldItem>
+-                <identifier>RecordNumberofLocations_cField</identifier>
+-            </fieldInstance>
+-        </itemInstances>
+         <name>Facet-654d0d87-cf57-456c-ba8b-4f4ee87e60b3</name>
+         <type>Facet</type>
+     </flexiPageRegions>
+@@ -180,4 +150,4 @@
          </properties>
      </template>
      <type>RecordPage</type>

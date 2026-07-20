@@ -1,19 +1,34 @@
-Removed the layout item referencing Account.SLAExpirationDate__c; all unrelated metadata and ordering were preserved.
+Removed the layout items referencing Active__c, CustomerPriority__c, and NumberofLocations__c.
 
 --- before/backup/layouts/Account-Account %28Support%29 Layout.layout-meta.xml
 +++ after/working/layouts/Account-Account %28Support%29 Layout.layout-meta.xml
-@@ -52,10 +52,6 @@
-             <layoutItems>
-                 <behavior>Edit</behavior>
-                 <field>SLA__c</field>
+@@ -41,14 +41,6 @@
+             </layoutItems>
+         </layoutColumns>
+         <layoutColumns>
+-            <layoutItems>
+-                <behavior>Edit</behavior>
+-                <field>Active__c</field>
 -            </layoutItems>
 -            <layoutItems>
 -                <behavior>Edit</behavior>
--                <field>SLAExpirationDate__c</field>
+-                <field>CustomerPriority__c</field>
+-            </layoutItems>
+             <layoutItems>
+                 <behavior>Edit</behavior>
+                 <field>SLA__c</field>
+@@ -60,10 +52,6 @@
+             <layoutItems>
+                 <behavior>Edit</behavior>
+                 <field>Rating</field>
+-            </layoutItems>
+-            <layoutItems>
+-                <behavior>Edit</behavior>
+-                <field>NumberofLocations__c</field>
              </layoutItems>
              <layoutItems>
                  <behavior>Edit</behavior>
-@@ -426,4 +422,4 @@
+@@ -422,4 +410,4 @@
          <sizeY>0</sizeY>
          <summaryLayoutStyle>Default</summaryLayoutStyle>
      </summaryLayout>

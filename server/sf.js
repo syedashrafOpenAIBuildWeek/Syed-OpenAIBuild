@@ -26,7 +26,14 @@ export function assertComponentName(value) {
 // retrieve-name lookups). Unbounded concurrency was OOM-killing the 512MB
 // free-tier container, so cap how many sf processes can run at once
 // regardless of how much logical parallelism exists upstream.
-const MAX_CONCURRENT_SF = Number(process.env.SF_MAX_CONCURRENCY || 1);
+// Two CLI workers substantially reduce planning latency while remaining
+// conservative for small containers. Operators on tighter hosts can restore
+// single-process behavior with SF_MAX_CONCURRENCY=1.
+const configuredSfConcurrency = Number(process.env.SF_MAX_CONCURRENCY || 2);
+const MAX_CONCURRENT_SF =
+  Number.isInteger(configuredSfConcurrency) && configuredSfConcurrency > 0
+    ? configuredSfConcurrency
+    : 2;
 let activeSf = 0;
 const sfQueue = [];
 
@@ -34,11 +41,13 @@ function runQueued(fn) {
   return new Promise((resolve, reject) => {
     const attempt = () => {
       activeSf += 1;
-      fn().then(resolve, reject).finally(() => {
-        activeSf -= 1;
-        const next = sfQueue.shift();
-        if (next) next();
-      });
+      fn()
+        .then(resolve, reject)
+        .finally(() => {
+          activeSf -= 1;
+          const next = sfQueue.shift();
+          if (next) next();
+        });
     };
     if (activeSf < MAX_CONCURRENT_SF) attempt();
     else sfQueue.push(attempt);

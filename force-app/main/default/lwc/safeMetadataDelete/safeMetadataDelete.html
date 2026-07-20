@@ -1,10 +1,19 @@
 <template>
-  <lightning-card title="Safe Metadata Delete" icon-name="utility:shield">
+  <lightning-card title="Safe Metadata Delete" icon-name="standard:security">
+    <div class="accent" aria-hidden="true"></div>
     <div class="slds-var-p-around_medium">
-      <p class="slds-text-body_small slds-var-m-bottom_medium">
-        Delete custom fields or objects through a review-first pipeline.
-        Standard metadata is always blocked.
-      </p>
+      <div class="intro slds-var-m-bottom_medium">
+        <lightning-icon
+          icon-name="utility:lock"
+          size="x-small"
+          alternative-text="Protected operation"
+          class="intro-icon"
+        ></lightning-icon>
+        <p class="slds-text-body_small">
+          Delete custom fields or objects through a review-first pipeline.
+          Standard metadata is always blocked.
+        </p>
+      </div>
       <lightning-textarea
         label="Command"
         value={command}
@@ -22,6 +31,7 @@
         <lightning-button
           variant="brand"
           label="Analyze safely"
+          icon-name="utility:search"
           onclick={analyze}
           disabled={analyzeDisabled}
         ></lightning-button>

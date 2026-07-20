@@ -1,5 +1,59 @@
-.actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-.target, .diff, .approval, .warning { border: 1px solid #c9c9c9; border-radius: 0.25rem; padding: 0.75rem; }
-.warning, .approval { background: #fff7e5; border-color: #fe9339; }
-.danger { color: #ba0517; font-weight: 700; }
-pre { background: #181818; color: #f3f3f3; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; max-height: 24rem; overflow: auto; padding: 0.75rem; white-space: pre; }
+.accent {
+  background: linear-gradient(90deg, #0b5cab, #1b96ff 55%, #2e844a);
+  height: 0.25rem;
+}
+
+.intro {
+  align-items: center;
+  background: linear-gradient(100deg, #eef6ff, #f2fbf5);
+  border: 1px solid #cfe9fe;
+  border-radius: 0.5rem;
+  display: flex;
+  gap: 0.625rem;
+  padding: 0.75rem;
+}
+
+.intro-icon {
+  --slds-c-icon-color-foreground-default: #0b5cab;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.target,
+.diff,
+.approval,
+.warning {
+  border: 1px solid #c9c9c9;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.target {
+  border-left: 0.25rem solid #1b96ff;
+}
+
+.warning,
+.approval {
+  background: #fff7e5;
+  border-color: #fe9339;
+}
+
+.danger {
+  color: #ba0517;
+  font-weight: 700;
+}
+
+pre {
+  background: #181818;
+  color: #f3f3f3;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  max-height: 24rem;
+  overflow: auto;
+  padding: 0.75rem;
+  white-space: pre;
+}

@@ -30,12 +30,6 @@
         <locationX>0</locationX>
         <locationY>0</locationY>
         <inputAssignments>
-            <field>NumberofLocations__c</field>
-            <value>
-                <elementReference>$Record.NumberofLocations__c</elementReference>
-            </value>
-        </inputAssignments>
-        <inputAssignments>
             <field>SLASerialNumber__c</field>
             <value>
                 <elementReference>$Record.SLASerialNumber__c</elementReference>

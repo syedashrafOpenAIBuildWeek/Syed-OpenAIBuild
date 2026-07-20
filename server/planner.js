@@ -50,7 +50,7 @@ const developerNameFor = (apiName) =>
 // MetadataComponentDependency rejects WHERE filters on RefMetadataComponentName
 // ("... is unknown") - only RefMetadataComponentId is filterable, so the
 // target's Tooling API Id has to be resolved first.
-async function resolveComponentId(fullName, targetType) {
+async function resolveComponentId(fullName, targetType, runQuery = query) {
   const soql =
     targetType === "field"
       ? (() => {
@@ -63,7 +63,7 @@ async function resolveComponentId(fullName, targetType) {
           );
         })()
       : `SELECT Id FROM CustomObject WHERE DeveloperName = ${quoteSoql(developerNameFor(fullName))}`;
-  const rows = records(await query(soql, true));
+  const rows = records(await runQuery(soql, true));
   if (!rows.length)
     throw new AppError(`Could not resolve ${fullName} in the Tooling API`);
   return rows[0].Id;
@@ -72,7 +72,7 @@ async function resolveComponentId(fullName, targetType) {
 // The dependency query only returns a display name (e.g. "Lead Layout"),
 // not the fully-qualified name retrieval/deploy require (e.g.
 // "Lead-Lead Layout"). Each metadata type resolves that qualifier differently.
-async function resolveRetrieveNames(rows) {
+async function resolveRetrieveNames(rows, runQuery = query) {
   const resolved = new Map();
   rows
     .filter((row) => row.ResolvedFullName)
@@ -98,7 +98,7 @@ async function resolveRetrieveNames(rows) {
       const ids = [...new Set(items.map((item) => item.MetadataComponentId))];
       if (type === "ListView") {
         const found = records(
-          await query(
+          await runQuery(
             `SELECT Id, DeveloperName, SobjectType FROM ListView WHERE Id IN (${ids.map(quoteSoql).join(",")})`
           )
         );
@@ -117,7 +117,7 @@ async function resolveRetrieveNames(rows) {
         ids.map(async (id) => {
           try {
             const found = records(
-              await query(
+              await runQuery(
                 `SELECT Id, FullName FROM ${type} WHERE Id = ${quoteSoql(id)}`,
                 true
               )
@@ -165,13 +165,13 @@ export function flexiPageMetadataReferences(metadata, fieldApiName) {
   );
 }
 
-async function flexiPageDependencies(fullName, targetType) {
+async function flexiPageDependencies(fullName, targetType, runQuery = query) {
   if (targetType !== "field") return [];
   const split = fullName.lastIndexOf(".");
   const objectApiName = fullName.slice(0, split);
   const fieldApiName = fullName.slice(split + 1);
   const pages = records(
-    await query(
+    await runQuery(
       "SELECT Id, DeveloperName, MasterLabel, Type, EntityDefinitionId " +
         `FROM FlexiPage WHERE EntityDefinitionId = ${quoteSoql(objectApiName)}`,
       true
@@ -180,7 +180,7 @@ async function flexiPageDependencies(fullName, targetType) {
   const matches = await Promise.all(
     pages.map(async (page) => {
       const found = records(
-        await query(
+        await runQuery(
           `SELECT Id, Metadata FROM FlexiPage WHERE Id = ${quoteSoql(page.Id)}`,
           true
         )
@@ -199,14 +199,14 @@ async function flexiPageDependencies(fullName, targetType) {
   return matches.filter(Boolean);
 }
 
-async function dependencies(fullName, targetType) {
-  const componentId = await resolveComponentId(fullName, targetType);
+async function dependencies(fullName, targetType, runQuery = query) {
+  const componentId = await resolveComponentId(fullName, targetType, runQuery);
   const soql =
     "SELECT MetadataComponentId, MetadataComponentName, MetadataComponentType " +
     `FROM MetadataComponentDependency WHERE RefMetadataComponentId = ${quoteSoql(componentId)}`;
   const [standardRows, flexiPageRows] = await Promise.all([
-    query(soql, true).then(records),
-    flexiPageDependencies(fullName, targetType)
+    runQuery(soql, true).then(records),
+    flexiPageDependencies(fullName, targetType, runQuery)
   ]);
   const rowsById = new Map();
   [...standardRows, ...flexiPageRows].forEach((row) =>
@@ -214,13 +214,13 @@ async function dependencies(fullName, targetType) {
   );
   const rows = [...rowsById.values()];
   const [resolved, flowVersionRows] = await Promise.all([
-    resolveRetrieveNames(rows),
+    resolveRetrieveNames(rows, runQuery),
     Promise.all(
       rows
         .filter((row) => row.MetadataComponentType === "Flow")
         .map(async (row) => {
           const found = records(
-            await query(
+            await runQuery(
               `SELECT Id, Status, VersionNumber FROM Flow WHERE Id = ${quoteSoql(row.MetadataComponentId)}`,
               true
             )
@@ -311,6 +311,19 @@ async function makeDiff(beforeFile, afterFile, root) {
 export async function buildPlan(command, intent) {
   intent = normalizeIntent(intent);
   const object = await describe(intent.objectApiName);
+  // A multi-field plan frequently asks for the same FlexiPage metadata and
+  // retrieve-name records. Share identical in-flight/results within this plan
+  // without caching across requests, where stale metadata would be unsafe.
+  const queryCache = new Map();
+  const cachedQuery = (soql, tooling = false) => {
+    const key = `${tooling ? "tooling" : "data"}:${soql}`;
+    if (!queryCache.has(key)) {
+      const pending = query(soql, tooling);
+      queryCache.set(key, pending);
+      pending.catch(() => queryCache.delete(key));
+    }
+    return queryCache.get(key);
+  };
   const allTargets =
     intent.targetType === "object"
       ? [
@@ -354,7 +367,11 @@ export async function buildPlan(command, intent) {
   // for no reason.
   const planned = await Promise.all(
     candidates.map(async (target) => {
-      const deps = await dependencies(target.fullName, target.targetType);
+      const deps = await dependencies(
+        target.fullName,
+        target.targetType,
+        cachedQuery
+      );
       const manual = deps.filter((dep) => !dep.autoFixable);
       let recordCount;
       let relationships = [];
