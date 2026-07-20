@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <description>Applies lead assignment rules to the newly created lead record.</description>
+        <name>Apply_Lead_Assignment_Rules</name>
+        <label>Apply Lead Assignment Rules</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <actionName>invocableApplyLeadAssignmentRules</actionName>
+        <actionType>invocableApplyLeadAssignmentRules</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>leadId</name>
+            <value>
+                <elementReference>leadRecordId</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>invocableApplyLeadAssignmentRules</nameSegment>
+        <offset>0</offset>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </actionCalls>
+    <apiVersion>67.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <description>Assigns the newly created lead record ID to the output variable.</description>
+        <name>Set_Lead_Record_ID</name>
+        <label>Set Lead Record ID</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>leadRecordId</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>leadRecord.Id</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Apply_Lead_Assignment_Rules</targetReference>
+        </connector>
+    </assignments>
+    <decisions>
+        <description>Determines if a lead record exists based on the information passed into the flow.</description>
+        <name>Does_Lead_Exist</name>
+        <label>Does Lead Exist</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnector>
+            <targetReference>Create_Lead_Record</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>No</defaultConnectorLabel>
+        <rules>
+            <name>Lead_Record_Exists</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Get_Lead_Record</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <label>Yes</label>
+        </rules>
+    </decisions>
+    <environments>Default</environments>
+    <interviewLabel>Create Lead with Safe Date and Email {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Create Lead with Safe Date and Email</label>
+    <overriddenFlow>sales_sfa_flows__CreateSalesLead</overriddenFlow>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordCreates>
+        <description>Creates a lead record using the information passed into the flow if a matching lead record doesn’t exist.</description>
+        <name>Create_Lead_Record</name>
+        <label>Create Lead Record</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Set_Lead_Record_ID</targetReference>
+        </connector>
+        <inputReference>leadRecord</inputReference>
+    </recordCreates>
+    <recordLookups>
+        <description>Gets the lead record based on the information passed into the flow, if one exists.</description>
+        <name>Get_Lead_Record</name>
+        <label>Get Lead Record</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignNullValuesIfNoRecordsFound>true</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Does_Lead_Exist</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Email</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>leadRecord.Email</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>LastName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>leadRecord.LastName</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>Company</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>leadRecord.Company</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>Safe_Date__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$System.OriginDateTime</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>Safe_Email__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue></stringValue>
+            </value>
+        </filters>
+        <object>Lead</object>
+        <outputAssignments>
+            <assignToReference>leadRecordId</assignToReference>
+            <field>Id</field>
+        </outputAssignments>
+    </recordLookups>
+    <start>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Get_Lead_Record</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+    <variables>
+        <description>Stores the lead record details to retrieve or create.</description>
+        <name>leadRecord</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Lead</objectType>
+    </variables>
+    <variables>
+        <description>Stores the ID of the lead record found or created.</description>
+        <name>leadRecordId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+</Flow>
