@@ -26,7 +26,7 @@ export function assertComponentName(value) {
 // retrieve-name lookups). Unbounded concurrency was OOM-killing the 512MB
 // free-tier container, so cap how many sf processes can run at once
 // regardless of how much logical parallelism exists upstream.
-const MAX_CONCURRENT_SF = Number(process.env.SF_MAX_CONCURRENCY || 2);
+const MAX_CONCURRENT_SF = Number(process.env.SF_MAX_CONCURRENCY || 1);
 let activeSf = 0;
 const sfQueue = [];
 
