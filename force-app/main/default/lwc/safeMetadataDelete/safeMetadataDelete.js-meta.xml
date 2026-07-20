@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+  <apiVersion>67.0</apiVersion><isExposed>true</isExposed><masterLabel>Safe Metadata Delete</masterLabel>
+  <description>Review-first custom field and object deletion by voice or text.</description>
+  <targets><target>lightning__HomePage</target><target>lightning__AppPage</target></targets>
+  <targetConfigs><targetConfig targets="lightning__HomePage,lightning__AppPage">
+    <property name="backendUrl" type="String" label="Backend URL" default="http://localhost:3001"/>
+    <property name="apiToken" type="String" label="Backend API token (optional)"/>
+  </targetConfig></targetConfigs>
+</LightningComponentBundle>

@@ -1,0 +1,85 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { projectRoot } from "./config.js";
+
+async function readFile(file) {
+  try {
+    return await fs.readFile(file);
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+export async function findDefaultPackageDirectory(root = projectRoot) {
+  try {
+    const project = JSON.parse(
+      await fs.readFile(path.join(root, "sfdx-project.json"), "utf8")
+    );
+    const directories = project.packageDirectories || [];
+    const selected =
+      directories.find((item) => item.default) || directories[0];
+    if (!selected?.path) return null;
+    return path.join(root, selected.path, "main", "default");
+  } catch (error) {
+    if (error.code === "ENOENT" || error instanceof SyntaxError) return null;
+    throw error;
+  }
+}
+
+export async function syncDiffsToWorkspace(
+  run,
+  { root = projectRoot } = {}
+) {
+  const metadataRoot = await findDefaultPackageDirectory(root);
+  if (!metadataRoot) {
+    return {
+      connected: false,
+      synced: [],
+      skipped: []
+    };
+  }
+
+  const synced = [];
+  const skipped = [];
+  for (const item of run.diffs || []) {
+    const relativeFile = item.file;
+    const backupFile = path.join(run.backupDir, relativeFile);
+    const workingFile = path.join(run.workingDir, relativeFile);
+    const workspaceFile = path.join(metadataRoot, relativeFile);
+    const [backupContent, workingContent, workspaceContent] = await Promise.all([
+      readFile(backupFile),
+      readFile(workingFile),
+      readFile(workspaceFile)
+    ]);
+
+    if (!workingContent) {
+      skipped.push({
+        file: relativeFile,
+        reason: "Generated metadata file was not found"
+      });
+      continue;
+    }
+    if (
+      workspaceContent &&
+      backupContent &&
+      !workspaceContent.equals(backupContent)
+    ) {
+      skipped.push({
+        file: relativeFile,
+        reason: "Local file differs from the retrieved org version"
+      });
+      continue;
+    }
+
+    await fs.mkdir(path.dirname(workspaceFile), { recursive: true });
+    await fs.writeFile(workspaceFile, workingContent);
+    synced.push(path.relative(root, workspaceFile));
+  }
+
+  return {
+    connected: true,
+    synced,
+    skipped
+  };
+}
