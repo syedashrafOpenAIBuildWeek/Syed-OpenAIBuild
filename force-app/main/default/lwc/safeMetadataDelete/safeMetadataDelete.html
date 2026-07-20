@@ -91,6 +91,13 @@
                   required.
                 </p></template
               >
+              <template lwc:if={target.hasFlowVersionCleanup}>
+                <p class="warning slds-var-m-top_small">
+                  Corrected Flow metadata will be activated first. Superseded
+                  Flow version(s) that still reference this field will then be
+                  removed before the field deletion.
+                </p>
+              </template>
               <template for:each={target.manualReview} for:item="dependency"
                 ><p key={dependency.key}>
                   Manual: {dependency.type} — {dependency.name}

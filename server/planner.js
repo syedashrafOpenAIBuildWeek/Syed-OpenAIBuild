@@ -133,6 +133,7 @@ function retrieveDependency(row, resolved) {
   return {
     name: row.MetadataComponentName,
     type,
+    componentId: row.MetadataComponentId,
     retrieveName: retrieveName || row.MetadataComponentName,
     autoFixable: AUTO_TYPES.has(type) && Boolean(retrieveName)
   };
@@ -286,6 +287,9 @@ export async function buildPlan(command, intent) {
       return {
         ...target,
         dependencies: deps,
+        flowVersionCleanup: deps
+          .filter((dep) => dep.type === "Flow")
+          .map((dep) => ({ id: dep.componentId, name: dep.name })),
         manualReview: manual,
         incomingRelationships: relationships,
         recordCount,

@@ -84,6 +84,20 @@ export const query = (soql, tooling = false) =>
     soql
   ]);
 
+export const deleteRecord = (sobject, recordId, tooling = false) =>
+  runSf([
+    "data",
+    "delete",
+    "record",
+    "--target-org",
+    config.orgAlias,
+    ...(tooling ? ["--use-tooling-api"] : []),
+    "--sobject",
+    assertApiName(sobject, "sObject API name"),
+    "--record-id",
+    recordId
+  ]);
+
 export async function retrieve(metadata, outputDir) {
   const stagingDir = path.join(
     projectRoot,

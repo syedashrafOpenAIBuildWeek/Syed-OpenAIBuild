@@ -61,6 +61,7 @@ export default class SafeMetadataDelete extends LightningElement {
     return (this.plan?.targets || []).map((target) => ({
       ...target,
       isObject: target.targetType === "object",
+      hasFlowVersionCleanup: Boolean(target.flowVersionCleanup?.length),
       manualReview: (target.manualReview || []).map((item) => ({
         ...item,
         key: `${item.type}:${item.name}`
@@ -127,12 +128,20 @@ export default class SafeMetadataDelete extends LightningElement {
     };
     this.recognition.start();
   }
-  async request(route, body) {
+  async request(route, body, options = {}) {
     const headers = { "Content-Type": "application/json" };
     if (this.apiToken) headers["X-Backend-Token"] = this.apiToken;
+    if (options.approvalToken) {
+      headers["X-Approval-Token"] = options.approvalToken;
+    }
+    const method = options.method || "POST";
     const response = await fetch(
       `${this.backendUrl.replace(/\/$/, "")}${route}`,
-      { method: "POST", headers, body: JSON.stringify(body) }
+      {
+        method,
+        headers,
+        ...(body === undefined ? {} : { body: JSON.stringify(body) })
+      }
     );
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -143,6 +152,39 @@ export default class SafeMetadataDelete extends LightningElement {
       throw error;
     }
     return result;
+  }
+  wait(milliseconds) {
+    // Polling keeps long Salesforce deployments outside the browser request
+    // timeout while preserving authoritative backend status.
+    // eslint-disable-next-line @lwc/lwc/no-async-operation
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  }
+  async waitForRun(runId, approvalToken) {
+    for (let attempt = 0; attempt < 450; attempt += 1) {
+      // Polls are intentionally sequential.
+      // eslint-disable-next-line no-await-in-loop
+      await this.wait(2000);
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const result = await this.request(`/api/runs/${runId}`, undefined, {
+          method: "GET",
+          approvalToken
+        });
+        this.plan = { ...this.plan, ...result };
+        if (result.status === "completed") return result;
+        if (result.status === "failed") {
+          const problems = result.failure?.problems?.join(" ");
+          throw new Error(
+            problems || result.failure?.message || "Deletion failed"
+          );
+        }
+      } catch (error) {
+        if (error.message !== "Failed to fetch") throw error;
+      }
+    }
+    throw new Error(
+      "The operation is still running. Refresh and check its status."
+    );
   }
   async analyze() {
     this.busy = true;
@@ -172,9 +214,14 @@ export default class SafeMetadataDelete extends LightningElement {
     this.busy = true;
     this.error = "";
     try {
-      const result = await this.request(
-        `/api/runs/${this.plan.runId}/approve`,
-        { approvalToken: this.plan.approvalToken, confirmed: true }
+      await this.request(`/api/runs/${this.plan.runId}/approve`, {
+        approvalToken: this.plan.approvalToken,
+        confirmed: true
+      });
+      this.plan = { ...this.plan, status: "executing" };
+      const result = await this.waitForRun(
+        this.plan.runId,
+        this.plan.approvalToken
       );
       this.plan = { ...this.plan, ...result };
       this.toast(
@@ -184,7 +231,6 @@ export default class SafeMetadataDelete extends LightningElement {
       );
     } catch (error) {
       this.error = this.formatError(error);
-      this.plan = { ...this.plan, status: "failed" };
     } finally {
       this.busy = false;
     }

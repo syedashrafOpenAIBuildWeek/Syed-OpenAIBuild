@@ -1,9 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { authorizeRun, persist } from "./store.js";
-import { deployDestructive, deploySource } from "./sf.js";
+import { deleteRecord, deployDestructive, deploySource, query } from "./sf.js";
 import { destructiveManifests } from "./xml.js";
 import { syncDiffsToWorkspace } from "./workspace.js";
+import { AppError } from "./errors.js";
+
+const quoteSoql = (value) =>
+  `'${value.replaceAll("\\", "\\\\").replaceAll("'", "\\'")}'`;
+const records = (result) => result.records || result.result?.records || [];
 
 async function hasFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -13,6 +18,39 @@ async function hasFiles(dir) {
       return true;
   }
   return false;
+}
+
+async function removeSupersededFlowVersions(run) {
+  const versions = new Map();
+  for (const target of run.actionable || []) {
+    for (const version of target.flowVersionCleanup || []) {
+      versions.set(version.id, version);
+    }
+  }
+  const removed = [];
+  for (const version of versions.values()) {
+    const found = records(
+      await query(
+        `SELECT Id, Status, VersionNumber FROM Flow WHERE Id = ${quoteSoql(version.id)}`,
+        true
+      )
+    )[0];
+    if (!found) continue;
+    if (found.Status === "Active") {
+      throw new AppError(
+        `Corrected Flow "${version.name}" was not activated; refusing to delete its active version`,
+        409
+      );
+    }
+    await deleteRecord("Flow", found.Id, true);
+    removed.push({
+      id: found.Id,
+      name: version.name,
+      versionNumber: found.VersionNumber,
+      previousStatus: found.Status
+    });
+  }
+  return removed;
 }
 
 export async function approve(id, token) {
@@ -26,6 +64,11 @@ export async function approve(id, token) {
       validation = await deploySource(run.workingDir, true);
       fixDeploy = await deploySource(run.workingDir, false);
     }
+    Object.assign(run, { validation, fixDeploy });
+    await persist(run);
+    const removedFlowVersions = await removeSupersededFlowVersions(run);
+    run.removedFlowVersions = removedFlowVersions;
+    await persist(run);
     const manifestDir = path.join(run.dir, "destructive");
     await fs.mkdir(manifestDir, { recursive: true });
     const manifests = destructiveManifests(run.actionable);
@@ -52,6 +95,7 @@ export async function approve(id, token) {
       validation,
       fixDeploy,
       deletion,
+      removedFlowVersions,
       workspaceSync
     });
     await persist(run);
@@ -60,6 +104,7 @@ export async function approve(id, token) {
       validation,
       fixDeploy,
       deletion,
+      removedFlowVersions,
       workspaceSync
     };
   } catch (error) {
