@@ -1,34 +1,19 @@
-Removed the layout items referencing Active__c, CustomerPriority__c, and NumberofLocations__c.
+Removed the layout item referencing Account.Account_Trigger__c; all unrelated metadata and ordering were preserved.
 
 --- before/backup/layouts/Account-Account %28Support%29 Layout.layout-meta.xml
 +++ after/working/layouts/Account-Account %28Support%29 Layout.layout-meta.xml
-@@ -41,14 +41,6 @@
+@@ -46,10 +46,6 @@
+             <layoutItems>
+                 <behavior>Edit</behavior>
+                 <field>Safe_Number__c</field>
+-            </layoutItems>
+-            <layoutItems>
+-                <behavior>Edit</behavior>
+-                <field>Account_Trigger__c</field>
              </layoutItems>
          </layoutColumns>
          <layoutColumns>
--            <layoutItems>
--                <behavior>Edit</behavior>
--                <field>Active__c</field>
--            </layoutItems>
--            <layoutItems>
--                <behavior>Edit</behavior>
--                <field>CustomerPriority__c</field>
--            </layoutItems>
-             <layoutItems>
-                 <behavior>Edit</behavior>
-                 <field>SLA__c</field>
-@@ -60,10 +52,6 @@
-             <layoutItems>
-                 <behavior>Edit</behavior>
-                 <field>Rating</field>
--            </layoutItems>
--            <layoutItems>
--                <behavior>Edit</behavior>
--                <field>NumberofLocations__c</field>
-             </layoutItems>
-             <layoutItems>
-                 <behavior>Edit</behavior>
-@@ -422,4 +410,4 @@
+@@ -422,4 +418,4 @@
          <sizeY>0</sizeY>
          <summaryLayoutStyle>Default</summaryLayoutStyle>
      </summaryLayout>
