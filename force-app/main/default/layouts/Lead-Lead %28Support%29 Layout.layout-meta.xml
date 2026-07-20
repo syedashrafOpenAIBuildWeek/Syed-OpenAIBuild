@@ -33,7 +33,7 @@
             </layoutItems>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>TestCheckbox__c</field>
+                <field>Safe_Test__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>
