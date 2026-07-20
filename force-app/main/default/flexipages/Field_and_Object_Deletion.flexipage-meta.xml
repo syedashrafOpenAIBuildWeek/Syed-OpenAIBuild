@@ -9,7 +9,7 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>backendUrl</name>
-                    <value>https://newly-candles-wright-fragrances.trycloudflare.com</value>
+                    <value>https://syed-openaibuild.onrender.com</value>
                 </componentInstanceProperties>
                 <componentName>safeMetadataDelete</componentName>
                 <identifier>c_safeMetadataDelete</identifier>
