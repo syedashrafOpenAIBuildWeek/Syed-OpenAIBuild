@@ -17,8 +17,7 @@ export async function findDefaultPackageDirectory(root = projectRoot) {
       await fs.readFile(path.join(root, "sfdx-project.json"), "utf8")
     );
     const directories = project.packageDirectories || [];
-    const selected =
-      directories.find((item) => item.default) || directories[0];
+    const selected = directories.find((item) => item.default) || directories[0];
     if (!selected?.path) return null;
     return path.join(root, selected.path, "main", "default");
   } catch (error) {
@@ -29,29 +28,30 @@ export async function findDefaultPackageDirectory(root = projectRoot) {
 
 export async function syncDiffsToWorkspace(
   run,
-  { root = projectRoot } = {}
+  { root = projectRoot, manifests } = {}
 ) {
   const metadataRoot = await findDefaultPackageDirectory(root);
   if (!metadataRoot) {
     return {
       connected: false,
       synced: [],
+      deleted: [],
+      manifests: [],
       skipped: []
     };
   }
 
   const synced = [];
+  const deleted = [];
   const skipped = [];
   for (const item of run.diffs || []) {
     const relativeFile = item.file;
     const backupFile = path.join(run.backupDir, relativeFile);
     const workingFile = path.join(run.workingDir, relativeFile);
     const workspaceFile = path.join(metadataRoot, relativeFile);
-    const [backupContent, workingContent, workspaceContent] = await Promise.all([
-      readFile(backupFile),
-      readFile(workingFile),
-      readFile(workspaceFile)
-    ]);
+    const [backupContent, workingContent, workspaceContent] = await Promise.all(
+      [readFile(backupFile), readFile(workingFile), readFile(workspaceFile)]
+    );
 
     if (!workingContent) {
       skipped.push({
@@ -77,9 +77,49 @@ export async function syncDiffsToWorkspace(
     synced.push(path.relative(root, workspaceFile));
   }
 
+  for (const target of run.actionable || []) {
+    if (target.targetType !== "field") {
+      skipped.push({
+        file: `objects/${target.objectApiName}`,
+        reason:
+          "Object source directories are not removed automatically; use the generated destructive manifest"
+      });
+      continue;
+    }
+    const relativeFile = path.join(
+      "objects",
+      target.objectApiName,
+      "fields",
+      `${target.fieldApiName}.field-meta.xml`
+    );
+    const workspaceFile = path.join(metadataRoot, relativeFile);
+    try {
+      await fs.unlink(workspaceFile);
+      deleted.push(path.relative(root, workspaceFile));
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  }
+
+  const manifestFiles = [];
+  if (manifests) {
+    const manifestDir = path.join(root, "manifest", "safeMetadataDelete");
+    await fs.mkdir(manifestDir, { recursive: true });
+    for (const [name, content] of [
+      ["package.xml", manifests.packageXml],
+      ["destructiveChangesPost.xml", manifests.destructiveXml]
+    ]) {
+      const file = path.join(manifestDir, name);
+      await fs.writeFile(file, content, "utf8");
+      manifestFiles.push(path.relative(root, file));
+    }
+  }
+
   return {
     connected: true,
     synced,
+    deleted,
+    manifests: manifestFiles,
     skipped
   };
 }

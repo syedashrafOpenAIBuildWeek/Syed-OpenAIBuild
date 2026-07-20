@@ -29,7 +29,8 @@ async function fixture() {
     backupDir,
     workingDir,
     relativeFile,
-    diffs: [{ file: relativeFile }]
+    diffs: [{ file: relativeFile }],
+    actionable: []
   };
 }
 
@@ -44,11 +45,7 @@ test("copies generated metadata into a Salesforce project", async (t) => {
   ]);
   assert.equal(
     await fs.readFile(
-      path.join(
-        run.root,
-        "force-app/main/default",
-        run.relativeFile
-      ),
+      path.join(run.root, "force-app/main/default", run.relativeFile),
       "utf8"
     ),
     "after"
@@ -82,4 +79,50 @@ test("keeps existing behavior outside a Salesforce project", async (t) => {
 
   assert.equal(result.connected, false);
   assert.deepEqual(result.synced, []);
+});
+
+test("removes a deleted field and writes destructive manifests", async (t) => {
+  const run = await fixture();
+  t.after(() => fs.rm(run.root, { recursive: true, force: true }));
+  const fieldFile = path.join(
+    run.root,
+    "force-app/main/default/objects/Lead/fields/TestCheckbox__c.field-meta.xml"
+  );
+  await fs.mkdir(path.dirname(fieldFile), { recursive: true });
+  await fs.writeFile(fieldFile, "field metadata");
+  run.actionable = [
+    {
+      targetType: "field",
+      objectApiName: "Lead",
+      fieldApiName: "TestCheckbox__c"
+    }
+  ];
+
+  const result = await syncDiffsToWorkspace(run, {
+    root: run.root,
+    manifests: {
+      packageXml: "<Package />",
+      destructiveXml:
+        "<Package><members>Lead.TestCheckbox__c</members></Package>"
+    }
+  });
+
+  await assert.rejects(fs.access(fieldFile));
+  assert.deepEqual(result.deleted, [
+    "force-app/main/default/objects/Lead/fields/TestCheckbox__c.field-meta.xml"
+  ]);
+  assert.deepEqual(result.manifests, [
+    "manifest/safeMetadataDelete/package.xml",
+    "manifest/safeMetadataDelete/destructiveChangesPost.xml"
+  ]);
+  assert.match(
+    await fs.readFile(
+      path.join(
+        run.root,
+        "manifest/safeMetadataDelete/destructiveChangesPost.xml"
+      ),
+      "utf8"
+    ),
+    /Lead\.TestCheckbox__c/
+  );
 });

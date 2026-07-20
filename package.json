@@ -6,7 +6,7 @@
   "scripts": {
     "backend": "node server/index.js",
     "backend:dev": "node --watch server/index.js",
-    "test:backend": "node --test server/test",
+    "test:backend": "node --test server/test/*.test.js",
     "lint": "eslint **/{aura,lwc}/**/*.js",
     "test": "npm run test:unit",
     "test:unit": "sfdx-lwc-jest",

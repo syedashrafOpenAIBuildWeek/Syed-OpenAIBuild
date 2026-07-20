@@ -1,29 +1,67 @@
 <template>
   <lightning-card title="Safe Metadata Delete" icon-name="utility:shield">
     <div class="slds-var-p-around_medium">
-      <p class="slds-text-body_small slds-var-m-bottom_medium">Delete custom fields or objects through a review-first pipeline. Standard metadata is always blocked.</p>
-      <lightning-textarea label="Command" value={command} onchange={handleCommand} placeholder="Delete Legacy_Field__c from Account" disabled={busy}></lightning-textarea>
+      <p class="slds-text-body_small slds-var-m-bottom_medium">
+        Delete custom fields or objects through a review-first pipeline.
+        Standard metadata is always blocked.
+      </p>
+      <lightning-textarea
+        label="Command"
+        value={command}
+        onchange={handleCommand}
+        placeholder="Delete Legacy_Field__c from Account"
+        disabled={busy}
+      ></lightning-textarea>
       <div class="actions slds-var-m-top_small">
-        <lightning-button label={micLabel} icon-name="utility:record" onclick={toggleListening} disabled={micDisabled}></lightning-button>
-        <lightning-button variant="brand" label="Analyze safely" onclick={analyze} disabled={analyzeDisabled}></lightning-button>
+        <lightning-button
+          label={micLabel}
+          icon-name="utility:record"
+          onclick={toggleListening}
+          disabled={micDisabled}
+        ></lightning-button>
+        <lightning-button
+          variant="brand"
+          label="Analyze safely"
+          onclick={analyze}
+          disabled={analyzeDisabled}
+        ></lightning-button>
       </div>
-      <template lwc:if={listening}><p class="slds-text-color_success slds-var-m-top_small" aria-live="polite">Listening…</p></template>
-      <template lwc:if={error}><div class="slds-notify slds-notify_alert slds-alert_error slds-var-m-top_medium" role="alert"><span>{error}</span></div></template>
-      <template lwc:if={busy}><lightning-spinner alternative-text="Working"></lightning-spinner></template>
+      <template lwc:if={listening}
+        ><p
+          class="slds-text-color_success slds-var-m-top_small"
+          aria-live="polite"
+        >
+          Listening…
+        </p></template
+      >
+      <template lwc:if={error}
+        ><div
+          class="slds-notify slds-notify_alert slds-alert_error slds-var-m-top_medium"
+          role="alert"
+        >
+          <span>{error}</span>
+        </div></template
+      >
+      <template lwc:if={busy}
+        ><lightning-spinner alternative-text="Working"></lightning-spinner
+      ></template>
       <template lwc:if={hasPlan}>
         <section class="slds-var-m-top_large">
-          <h2 class="slds-text-heading_small">Review</h2><p>Status: {plan.status}</p>
+          <h2 class="slds-text-heading_small">Review</h2>
+          <p>Status: {plan.status}</p>
           <template lwc:if={hasBlocked}>
-            <div class="warning slds-var-m-top_medium"><h3 class="slds-text-title_bold">Blocked</h3>
-              <template for:each={plan.blocked} for:item="item"><p key={item.fullName}>{item.fullName}: {item.reason}</p></template>
+            <div class="warning slds-var-m-top_medium">
+              <h3 class="slds-text-title_bold">Blocked</h3>
+              <template for:each={plan.blocked} for:item="item"
+                ><p key={item.fullName}>
+                  {item.fullName}: {item.reason}
+                </p></template
+              >
             </div>
           </template>
           <template lwc:if={hasWorkspaceSync}>
             <div class="slds-var-m-top_medium" aria-live="polite">
-              <p>
-                {plan.workspaceSync.synced.length} changed metadata file(s)
-                copied to the connected Salesforce project for source control.
-              </p>
+              <p>{workspaceSyncSummary}</p>
               <template lwc:if={hasWorkspaceSyncSkipped}>
                 <div class="warning slds-var-m-top_small">
                   <p class="slds-text-title_bold">
@@ -42,23 +80,82 @@
           <template for:each={targetViews} for:item="target">
             <article key={target.fullName} class="target slds-var-m-top_medium">
               <h3 class="slds-text-title_bold">{target.fullName}</h3>
-              <template lwc:if={target.isObject}><p class="danger">Deleting this object deletes {target.recordCount} records.</p></template>
-              <template lwc:if={target.hardBlocked}><p class="danger">Stopped: manual review or an incoming relationship is required.</p></template>
-              <template for:each={target.manualReview} for:item="dependency"><p key={dependency.key}>Manual: {dependency.type} — {dependency.name}</p></template>
-              <template for:each={target.incomingRelationships} for:item="relationship"><p key={relationship.key}>Relationship blocker: {relationship.objectApiName}.{relationship.fieldApiName}</p></template>
+              <template lwc:if={target.isObject}
+                ><p class="danger">
+                  Deleting this object deletes {target.recordCount} records.
+                </p></template
+              >
+              <template lwc:if={target.hardBlocked}
+                ><p class="danger">
+                  Stopped: manual review or an incoming relationship is
+                  required.
+                </p></template
+              >
+              <template for:each={target.manualReview} for:item="dependency"
+                ><p key={dependency.key}>
+                  Manual: {dependency.type} — {dependency.name}
+                </p></template
+              >
+              <template
+                for:each={target.incomingRelationships}
+                for:item="relationship"
+                ><p key={relationship.key}>
+                  Relationship blocker:
+                  {relationship.objectApiName}.{relationship.fieldApiName}
+                </p></template
+              >
             </article>
           </template>
           <template lwc:if={hasDiffs}>
-            <h3 class="slds-text-title_bold slds-var-m-top_large">Proposed dependency fixes</h3>
-            <template for:each={plan.diffs} for:item="item"><article key={item.file} class="diff slds-var-m-top_small"><p>{item.file} — {item.summary}</p><pre>{item.diff}</pre></article></template>
+            <h3 class="slds-text-title_bold slds-var-m-top_large">
+              Proposed dependency fixes
+            </h3>
+            <template for:each={plan.diffs} for:item="item"
+              ><article key={item.file} class="diff slds-var-m-top_small">
+                <p>{item.file} — {item.summary}</p>
+                <pre>{item.diff}</pre>
+              </article></template
+            >
+          </template>
+          <template lwc:if={hasNoDependencyDiffs}>
+            <p class="slds-var-m-top_medium">
+              No dependency metadata changes are required. The deleted
+              field/object and destructive manifest will still be reflected in
+              the connected Salesforce project after approval succeeds.
+            </p>
           </template>
           <template lwc:if={canApprove}>
             <div class="approval slds-var-m-top_large">
-              <lightning-input type="checkbox" label="I reviewed the warnings and diffs and approve the destructive operation." checked={approvalChecked} onchange={handleApprovalCheck}></lightning-input>
-              <lightning-button class="slds-var-m-top_small" variant="destructive" label="Validate, deploy fixes, then delete" onclick={approve} disabled={approveDisabled}></lightning-button>
+              <lightning-input
+                type="checkbox"
+                label="I reviewed the warnings and diffs and approve the destructive operation."
+                checked={approvalChecked}
+                onchange={handleApprovalCheck}
+              ></lightning-input>
+              <div class="approval-actions slds-var-m-top_small">
+                <lightning-button
+                  label="Cancel"
+                  onclick={handleCancel}
+                  disabled={busy}
+                ></lightning-button>
+                <lightning-button
+                  variant="destructive"
+                  label="Validate, deploy fixes, then delete"
+                  onclick={approve}
+                  disabled={approveDisabled}
+                ></lightning-button>
+              </div>
             </div>
           </template>
-          <template lwc:if={canRollback}><lightning-button class="slds-var-m-top_medium" variant="destructive-text" label="Rollback backed-up metadata" onclick={rollback} disabled={busy}></lightning-button></template>
+          <template lwc:if={canRollback}
+            ><lightning-button
+              class="slds-var-m-top_medium"
+              variant="destructive-text"
+              label="Rollback backed-up metadata"
+              onclick={rollback}
+              disabled={busy}
+            ></lightning-button
+          ></template>
         </section>
       </template>
     </div>

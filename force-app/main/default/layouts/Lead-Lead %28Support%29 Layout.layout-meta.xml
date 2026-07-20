@@ -35,10 +35,6 @@
                 <behavior>Edit</behavior>
                 <field>TestCheckbox__c</field>
             </layoutItems>
-            <layoutItems>
-                <behavior>Edit</behavior>
-                <field>Test_Safe__c</field>
-            </layoutItems>
         </layoutColumns>
         <layoutColumns>
             <layoutItems>

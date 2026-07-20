@@ -9,7 +9,8 @@ async function hasFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.isFile()) return true;
-    if (entry.isDirectory() && await hasFiles(path.join(dir, entry.name))) return true;
+    if (entry.isDirectory() && (await hasFiles(path.join(dir, entry.name))))
+      return true;
   }
   return false;
 }
@@ -35,11 +36,13 @@ export async function approve(id, token) {
     const deletion = await deployDestructive(packageXml, destructiveXml);
     let workspaceSync;
     try {
-      workspaceSync = await syncDiffsToWorkspace(run);
+      workspaceSync = await syncDiffsToWorkspace(run, { manifests });
     } catch (error) {
       workspaceSync = {
         connected: true,
         synced: [],
+        deleted: [],
+        manifests: [],
         skipped: [],
         error: error.message
       };
