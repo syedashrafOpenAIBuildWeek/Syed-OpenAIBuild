@@ -32,49 +32,69 @@ if [ -n "$CURRENT_URL" ]; then
   STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${TOKEN_HEADER[@]}" "$CURRENT_URL/api/health" 2>/dev/null || echo "000")
 fi
 
-if [ "$STATUS" = "200" ]; then
+# "Alive" isn't enough on its own - the tunnel process can be reachable while
+# Salesforce still points at an older/stale URL from a previous run that
+# failed partway through. Compare against what's actually deployed.
+DEPLOYED_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' "$FLEXIPAGE_FILE" 2>/dev/null | head -1)
+
+if [ "$STATUS" = "200" ] && [ "$CURRENT_URL" = "$DEPLOYED_URL" ]; then
   echo "Tunnel is alive: $CURRENT_URL"
   echo "Nothing to do."
   exit 0
 fi
 
-echo "Tunnel is down (last known: $CURRENT_URL, status: $STATUS). Fixing..."
+if [ "$STATUS" = "200" ]; then
+  echo "Tunnel is alive ($CURRENT_URL) but Salesforce still points at ${DEPLOYED_URL:-nothing}. Repointing..."
+  NEW_URL="$CURRENT_URL"
+else
+  echo "Tunnel is down (last known: $CURRENT_URL, status: $STATUS). Fixing..."
 
-pkill -f "cloudflared tunnel" 2>/dev/null || true
-sleep 1
-
-if ! pgrep -f "node server/index.js" > /dev/null; then
-  echo "Backend isn't running either - starting it..."
-  nohup npm run backend > /tmp/safe-metadata-delete-backend.log 2>&1 &
-  disown
-  sleep 2
-fi
-
-echo "Starting a fresh tunnel..."
-> "$TUNNEL_LOG"
-cloudflared tunnel --url http://localhost:3001 > "$TUNNEL_LOG" 2>&1 &
-disown
-
-# Registration time varies (8-15s+ observed) - poll instead of a fixed sleep
-# that can fire before the URL line is even written yet.
-for _ in $(seq 1 24); do
-  if grep -q 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' "$TUNNEL_LOG" 2>/dev/null; then
-    break
-  fi
+  pkill -f "cloudflared tunnel" 2>/dev/null || true
   sleep 1
-done
 
-NEW_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' "$TUNNEL_LOG" | head -1)
-if [ -z "$NEW_URL" ]; then
-  echo "ERROR: couldn't get a new tunnel URL. Check $TUNNEL_LOG manually."
-  exit 1
-fi
-echo "New tunnel: $NEW_URL"
+  if ! pgrep -f "node server/index.js" > /dev/null; then
+    echo "Backend isn't running either - starting it..."
+    nohup npm run backend > /tmp/safe-metadata-delete-backend.log 2>&1 &
+    disown
+    sleep 2
+  fi
 
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${TOKEN_HEADER[@]}" "$NEW_URL/api/health")
-if [ "$STATUS" != "200" ]; then
-  echo "ERROR: new tunnel isn't responding (status: $STATUS). Try running this again in a few seconds."
-  exit 1
+  echo "Starting a fresh tunnel..."
+  > "$TUNNEL_LOG"
+  cloudflared tunnel --url http://localhost:3001 > "$TUNNEL_LOG" 2>&1 &
+  disown
+
+  # Registration time varies (8-15s+ observed) - poll instead of a fixed sleep
+  # that can fire before the URL line is even written yet.
+  for _ in $(seq 1 24); do
+    if grep -q 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' "$TUNNEL_LOG" 2>/dev/null; then
+      break
+    fi
+    sleep 1
+  done
+
+  NEW_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' "$TUNNEL_LOG" | head -1)
+  if [ -z "$NEW_URL" ]; then
+    echo "ERROR: couldn't get a new tunnel URL. Check $TUNNEL_LOG manually."
+    exit 1
+  fi
+  echo "New tunnel: $NEW_URL"
+
+  # A freshly-registered tunnel can take a few more seconds to be end-to-end
+  # routable, so retry instead of failing (silently, under set -e) on one shot.
+  STATUS="000"
+  for _ in $(seq 1 6); do
+    STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${TOKEN_HEADER[@]}" "$NEW_URL/api/health" 2>/dev/null || echo "000")
+    if [ "$STATUS" = "200" ]; then
+      break
+    fi
+    sleep 3
+  done
+
+  if [ "$STATUS" != "200" ]; then
+    echo "ERROR: new tunnel isn't responding (status: $STATUS). Try running this again in a few seconds."
+    exit 1
+  fi
 fi
 
 echo "Looking up the CSP Trusted Site record..."
