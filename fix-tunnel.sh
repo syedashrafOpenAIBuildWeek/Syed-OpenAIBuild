@@ -51,9 +51,18 @@ if ! pgrep -f "node server/index.js" > /dev/null; then
 fi
 
 echo "Starting a fresh tunnel..."
+> "$TUNNEL_LOG"
 cloudflared tunnel --url http://localhost:3001 > "$TUNNEL_LOG" 2>&1 &
 disown
-sleep 8
+
+# Registration time varies (8-15s+ observed) - poll instead of a fixed sleep
+# that can fire before the URL line is even written yet.
+for _ in $(seq 1 24); do
+  if grep -q 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' "$TUNNEL_LOG" 2>/dev/null; then
+    break
+  fi
+  sleep 1
+done
 
 NEW_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' "$TUNNEL_LOG" | head -1)
 if [ -z "$NEW_URL" ]; then
