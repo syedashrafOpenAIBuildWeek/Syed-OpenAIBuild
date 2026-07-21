@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { assertApiName, describe, query, retrieve } from "./sf.js";
+import { assertApiName, describe, describeReport, query, retrieve } from "./sf.js";
 import { removeReferences } from "./openai.js";
 import { createRun, persist } from "./store.js";
 import { AppError } from "./errors.js";
@@ -200,6 +200,44 @@ async function flexiPageDependencies(fullName, targetType, runQuery = query) {
   return matches.filter(Boolean);
 }
 
+// Salesforce's own "Where is this used?" surfaces Report references that
+// MetadataComponentDependency silently omits - checked empirically, not
+// documented. Scanning every report's describe() is the only general way to
+// catch this rather than hoping each newly-discovered gap gets special-cased
+// by hand. Left non-autoFixable (no ResolvedFullName) since Report isn't
+// Tooling-API queryable, so there's no reliable retrieve name to resolve to -
+// resolveRetrieveNames' existing fallback correctly routes these to manual
+// review instead of guessing at a fix.
+async function reportDependencies(fullName, targetType, runQuery = query) {
+  if (targetType !== "field") return [];
+  const fieldApiName = fullName.slice(fullName.lastIndexOf(".") + 1);
+  let reports;
+  try {
+    reports = records(
+      await runQuery("SELECT Id, Name, DeveloperName FROM Report")
+    );
+  } catch {
+    return [];
+  }
+  const matches = await Promise.all(
+    reports.map(async (report) => {
+      let described;
+      try {
+        described = await describeReport(report.Id);
+      } catch {
+        return null;
+      }
+      if (!JSON.stringify(described).includes(fieldApiName)) return null;
+      return {
+        MetadataComponentId: report.Id,
+        MetadataComponentName: report.Name,
+        MetadataComponentType: "Report"
+      };
+    })
+  );
+  return matches.filter(Boolean);
+}
+
 export async function ownedObjectMetadata(objectApiName, runQuery = query) {
   const objectId = await resolveComponentId(objectApiName, "object", runQuery);
   const ownerIdentifiers = [...new Set([objectApiName, objectId])]
@@ -252,12 +290,13 @@ async function dependencies(fullName, targetType, runQuery = query) {
   const soql =
     "SELECT MetadataComponentId, MetadataComponentName, MetadataComponentType " +
     `FROM MetadataComponentDependency WHERE RefMetadataComponentId = ${quoteSoql(componentId)}`;
-  const [standardRows, flexiPageRows] = await Promise.all([
+  const [standardRows, flexiPageRows, reportRows] = await Promise.all([
     runQuery(soql, true).then(records),
-    flexiPageDependencies(fullName, targetType, runQuery)
+    flexiPageDependencies(fullName, targetType, runQuery),
+    reportDependencies(fullName, targetType, runQuery)
   ]);
   const rowsById = new Map();
-  [...standardRows, ...flexiPageRows].forEach((row) =>
+  [...standardRows, ...flexiPageRows, ...reportRows].forEach((row) =>
     rowsById.set(`${row.MetadataComponentType}:${row.MetadataComponentId}`, row)
   );
   const rows = [...rowsById.values()];

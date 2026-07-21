@@ -166,6 +166,18 @@ export async function query(soql, tooling = false) {
   );
 }
 
+// Reports aren't queryable via the Tooling API at all ("sObject type
+// 'Report' is not supported"), so field references inside them can't be
+// found via MetadataComponentDependency or resolved to a retrieve name the
+// way Layout/ValidationRule are. The Analytics REST describe endpoint is the
+// only reliable way to see what a report actually references.
+export async function describeReport(reportId) {
+  const session = await orgSession();
+  return salesforceRequest(
+    `/services/data/v${session.apiVersion}/analytics/reports/${encodeURIComponent(reportId)}/describe`
+  );
+}
+
 export const deleteRecord = (sobject, recordId, tooling = false) =>
   runSf([
     "data",
