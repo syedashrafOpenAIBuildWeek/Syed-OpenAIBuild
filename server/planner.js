@@ -661,8 +661,11 @@ export async function buildPlan(command, intent) {
       metadataItems,
       backupDir
     );
-    if (!localSnapshot) await retrieve(metadataItems, backupDir);
+    const retrievedFileMap = localSnapshot
+      ? new Map()
+      : await retrieve(metadataItems, backupDir);
     await fs.cp(backupDir, workingDir, { recursive: true });
+    const emptiedComponents = [];
     const perFile = await Promise.all(
       (await walk(backupDir)).map(async (file) => {
         const content = await fs.readFile(file, "utf8");
@@ -683,6 +686,26 @@ export async function buildPlan(command, intent) {
           (await removeReferences({ content, fileName, targets }));
         const updatedContent = edit.updatedContent;
         const output = path.join(workingDir, fileName);
+        // A field/object can be the *only* reason a component (e.g. a
+        // ValidationRule) exists at all - the AI edit correctly returns
+        // empty content in that case. Deploying an empty file is invalid
+        // XML and fails the whole deploy; the component needs to be
+        // destructively deleted instead of deployed.
+        if (!updatedContent.trim()) {
+          const info = retrievedFileMap.get(fileName);
+          if (info) {
+            await fs.rm(output, { force: true });
+            emptiedComponents.push({ type: info.type, name: info.fullName });
+            const diff = await makeDiff(file, "/dev/null", run.dir).catch(
+              () => ""
+            );
+            return {
+              file: fileName,
+              diff: diff || `--- ${fileName}\n+++ /dev/null\n(entire component removed)`,
+              summary: `${edit.summary} This component will be deleted entirely rather than deployed empty.`
+            };
+          }
+        }
         await fs.writeFile(output, updatedContent, "utf8");
         const diff = await makeDiff(file, output, run.dir);
         if (!diff) return null;
@@ -696,9 +719,11 @@ export async function buildPlan(command, intent) {
     diffs = perFile.filter(Boolean);
     run.localSnapshot = localSnapshot;
     run.metadataItems = metadataItems;
+    run.emptiedComponents = emptiedComponents;
   } else {
     await fs.mkdir(backupDir, { recursive: true });
     await fs.mkdir(workingDir, { recursive: true });
+    run.emptiedComponents = [];
   }
   Object.assign(run, {
     state: actionable.length ? "awaiting_approval" : "blocked",

@@ -4,7 +4,11 @@ const escape = (value) =>
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
 
-export function destructiveManifests(targets, apiVersion = "67.0") {
+export function destructiveManifests(
+  targets,
+  extraComponents = [],
+  apiVersion = "67.0"
+) {
   const byType = new Map();
   for (const target of targets) {
     for (const item of target.ownedMetadata || []) {
@@ -20,6 +24,13 @@ export function destructiveManifests(targets, apiVersion = "67.0") {
         ? `${target.objectApiName}.${target.fieldApiName}`
         : target.objectApiName;
     byType.set(type, [...(byType.get(type) || []), member]);
+  }
+  // Components whose only content was a reference to the target(s) being
+  // deleted - the AI edit reduced them to nothing, so they get destructively
+  // deleted alongside the target instead of deployed as an empty/invalid file.
+  for (const item of extraComponents || []) {
+    if (!item?.type || !item?.name) continue;
+    byType.set(item.type, [...(byType.get(item.type) || []), item.name]);
   }
   const types = [...byType]
     .map(

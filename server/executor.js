@@ -119,7 +119,10 @@ export async function approve(id, token) {
     await persist(run);
     const manifestDir = path.join(run.dir, "destructive");
     await fs.mkdir(manifestDir, { recursive: true });
-    const manifests = destructiveManifests(run.actionable);
+    const manifests = destructiveManifests(
+      run.actionable,
+      run.emptiedComponents
+    );
     const packageXml = path.join(manifestDir, "package.xml");
     const destructiveXml = path.join(manifestDir, "destructiveChangesPost.xml");
     await fs.writeFile(packageXml, manifests.packageXml, "utf8");

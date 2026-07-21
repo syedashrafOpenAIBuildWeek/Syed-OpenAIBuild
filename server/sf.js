@@ -193,6 +193,12 @@ export const deleteRecord = (sobject, recordId, tooling = false) =>
     recordId
   ]);
 
+// Returns a map of output-relative file path -> { type, fullName } for every
+// retrieved file, built from the CLI's own file listing rather than guessed
+// from naming conventions - callers use this to know exactly which metadata
+// component a given file corresponds to (e.g. to destructively delete a
+// component whose content an AI edit reduced to nothing, instead of
+// deploying an empty/invalid file).
 export async function retrieve(metadata, outputDir) {
   const stagingDir = path.join(
     projectRoot,
@@ -202,7 +208,7 @@ export async function retrieve(metadata, outputDir) {
   );
   await fs.mkdir(path.dirname(stagingDir), { recursive: true });
   try {
-    await runSf([
+    const result = await runSf([
       "project",
       "retrieve",
       "start",
@@ -219,6 +225,14 @@ export async function retrieve(metadata, outputDir) {
     ]);
     await fs.mkdir(outputDir, { recursive: true });
     await fs.cp(stagingDir, outputDir, { recursive: true });
+    const fileMap = new Map();
+    for (const file of result?.files || []) {
+      if (!file.filePath || !file.type || !file.fullName) continue;
+      const relative = path.relative(stagingDir, file.filePath);
+      if (relative.startsWith("..")) continue;
+      fileMap.set(relative, { type: file.type, fullName: file.fullName });
+    }
+    return fileMap;
   } finally {
     await fs.rm(stagingDir, { recursive: true, force: true });
   }
