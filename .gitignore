@@ -45,6 +45,7 @@ $RECYCLE.BIN/
 .env
 .safe-delete/
 safe-delete-runs/
+manifest/
 
 # Python Salesforce Functions
 **/__pycache__/
