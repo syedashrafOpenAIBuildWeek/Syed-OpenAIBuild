@@ -540,9 +540,12 @@ export async function buildPlan(command, intent) {
       };
     })
   );
+  // Auto-fixable dependency diffs are generated for every planned target,
+  // not just actionable (non-hard-blocked) ones, so a blocked run still
+  // shows the full impact for review - only approval itself is gated on
+  // actionable.length below.
   const metadata = new Map();
   for (const target of planned) {
-    if (target.hardBlocked) continue;
     target.dependencies
       .filter(
         (dep) => dep.autoFixable && !dep.cleanupOnly && !dep.deleteWithTarget
@@ -555,12 +558,6 @@ export async function buildPlan(command, intent) {
       );
   }
   const actionable = planned.filter((target) => !target.hardBlocked);
-  if (!actionable.length) {
-    run.state = "blocked";
-    Object.assign(run, { blocked, targets: planned });
-    await persist(run);
-    return publicPlan(run);
-  }
 
   const backupDir = path.join(run.dir, "backup");
   const workingDir = path.join(run.dir, "working");
@@ -581,8 +578,14 @@ export async function buildPlan(command, intent) {
     );
   });
   const targetMetadataItems = [...targetMetadata.values()];
-  await retrieve(targetMetadataItems, targetBackupDir);
-  const targetBackupFiles = await walk(targetBackupDir);
+  if (targetMetadataItems.length) {
+    await retrieve(targetMetadataItems, targetBackupDir);
+  } else {
+    await fs.mkdir(targetBackupDir, { recursive: true });
+  }
+  const targetBackupFiles = targetMetadataItems.length
+    ? await walk(targetBackupDir)
+    : [];
   for (const target of planned) {
     const ownedFiles = new Set(
       (target.ownedMetadata || []).map((item) => {
@@ -626,7 +629,7 @@ export async function buildPlan(command, intent) {
     const perFile = await Promise.all(
       (await walk(backupDir)).map(async (file) => {
         const content = await fs.readFile(file, "utf8");
-        const relevant = actionable.filter((target) => {
+        const relevant = planned.filter((target) => {
           const bareName =
             target.targetType === "field"
               ? target.fieldApiName
@@ -661,7 +664,7 @@ export async function buildPlan(command, intent) {
     await fs.mkdir(workingDir, { recursive: true });
   }
   Object.assign(run, {
-    state: "awaiting_approval",
+    state: actionable.length ? "awaiting_approval" : "blocked",
     blocked,
     targets: planned,
     actionable,
