@@ -41,7 +41,7 @@ No Salesforce OAuth flow or Named Credential is used — the server invokes `sf`
 
 ## Testing without setup
 
-A live instance is running against a Developer Edition org during the judging period — login: TODO (add credentials here, or share privately per the submission form, not in this public README).
+Login credentials will be provided in private to test in live instance.
 
 ## Safety pipeline
 
