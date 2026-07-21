@@ -20,7 +20,13 @@ Flow: parse intent → classify (block standard) → scan dependencies → hard-
 
 ## Setup
 
-Prerequisites: Node.js 18+, [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli), an OpenAI API key, [cloudflared](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/) (or any other way to get an HTTPS URL to your machine). `fix-tunnel.sh` uses macOS `sed` syntax — tested on macOS; Linux users should adjust that one line (`sed -i ''` → `sed -i`).
+Prerequisites: Node.js 18+, [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli), an OpenAI API key, [cloudflared](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/).
+
+**macOS** (tested end-to-end): `brew install node cloudflared`, install Salesforce CLI from the link above or `npm install -g @salesforce/cli`. Run everything from Terminal.
+
+**Windows** (install steps only, not end-to-end tested): install Node and Salesforce CLI from their installers above (or `winget install Salesforce.sf`), and `cloudflared` from its [Windows installer](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/). `fix-tunnel.sh` is a bash script — run it from **Git Bash** (bundled with [Git for Windows](https://gitforwindows.org/)) or **WSL2**, not PowerShell/CMD directly. One line needs a tweak first: in `fix-tunnel.sh`, change `sed -i ''` to `sed -i` (that empty-quote argument is macOS/BSD `sed` syntax; Git Bash and WSL both use GNU `sed`, which errors on it).
+
+Steps below are identical on both platforms once prerequisites are installed:
 
 1. `sf org login web --alias hackathon-org --set-default` (use a different alias if you want, then set `SF_ORG_ALIAS` in `.env` to match).
 2. `npm install`
