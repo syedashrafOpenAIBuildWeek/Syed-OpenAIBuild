@@ -20,14 +20,22 @@ Flow: parse intent → classify (block standard) → scan dependencies → hard-
 
 ## Setup
 
-1. Copy `.env.example` to `.env` and set `OPENAI_API_KEY`.
-2. Set `CORS_ORIGINS` to the exact Lightning origin.
-3. Optionally set `BACKEND_API_TOKEN` and put the same value in the component property.
-4. Run `npm install`, then `npm run backend`.
+Prerequisites: Node.js 18+, [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli), an OpenAI API key, [cloudflared](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/) (or any other way to get an HTTPS URL to your machine). `fix-tunnel.sh` uses macOS `sed` syntax — tested on macOS; Linux users should adjust that one line (`sed -i ''` → `sed -i`).
 
-The default backend/CSP URL is `http://localhost:3001`. Salesforce pages are HTTPS, so normal org use needs an HTTPS backend URL. Change both the App Builder `Backend URL` property and `force-app/main/default/cspTrustedSites/Safe_Delete_Backend.cspTrustedSite-meta.xml`.
+1. `sf org login web --alias hackathon-org --set-default` (use a different alias if you want, then set `SF_ORG_ALIAS` in `.env` to match).
+2. `npm install`
+3. Copy `.env.example` to `.env`, set `OPENAI_API_KEY`. `BACKEND_API_TOKEN` already matches the value baked into the checked-in Home Page — leave it as-is, or change both if you want your own. Set `CORS_ORIGINS` to your org's exact Lightning/My Domain origin(s).
+4. `sf project deploy start --source-dir force-app --target-org hackathon-org`
+5. `npm run backend`, then `./fix-tunnel.sh` — starts a Cloudflare tunnel and points the org's CSP Trusted Site and Home Page at it automatically.
+6. Setup → Lightning App Builder → open **Field and Object Deletion** (deployed in step 4) → Activation → assign as your Home Page (org default, or to a specific app/profile) → Save.
 
-No Salesforce OAuth flow, Named Credential, or new auth is used. The server always invokes `sf ... --target-org hackathon-org`.
+If the tunnel dies later (`Failed to Fetch` in the app — free tunnels have no uptime guarantee), rerun `./fix-tunnel.sh`.
+
+No Salesforce OAuth flow or Named Credential is used — the server invokes `sf` CLI commands against whatever org `SF_ORG_ALIAS` points at (default `hackathon-org`), reusing the session from step 1.
+
+## Testing without setup
+
+A live instance is running against a Developer Edition org during the judging period — login: TODO (add credentials here, or share privately per the submission form, not in this public README).
 
 ## Safety pipeline
 
