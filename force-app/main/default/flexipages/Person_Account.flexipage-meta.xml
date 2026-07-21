@@ -89,16 +89,6 @@
                 <identifier>RecordSLA_cField</identifier>
             </fieldInstance>
         </itemInstances>
-        <itemInstances>
-            <fieldInstance>
-                <fieldInstanceProperties>
-                    <name>uiBehavior</name>
-                    <value>none</value>
-                </fieldInstanceProperties>
-                <fieldItem>Record.SLASerialNumber__c</fieldItem>
-                <identifier>RecordSLASerialNumber_cField</identifier>
-            </fieldInstance>
-        </itemInstances>
         <name>Facet-654d0d87-cf57-456c-ba8b-4f4ee87e60b3</name>
         <type>Facet</type>
     </flexiPageRegions>

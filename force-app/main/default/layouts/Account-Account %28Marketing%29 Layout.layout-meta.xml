@@ -98,10 +98,6 @@
                 <field>SLA__c</field>
             </layoutItems>
             <layoutItems>
-                <behavior>Required</behavior>
-                <field>SLASerialNumber__c</field>
-            </layoutItems>
-            <layoutItems>
                 <behavior>Edit</behavior>
                 <field>Industry</field>
             </layoutItems>
