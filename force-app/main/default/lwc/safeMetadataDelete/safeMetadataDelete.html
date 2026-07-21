@@ -158,6 +158,9 @@
               <template for:each={target.manualReview} for:item="dependency"
                 ><p key={dependency.key}>
                   Manual: {dependency.type} — {dependency.name}
+                  <template if:true={dependency.reason}
+                    ><br /><em>{dependency.reason}</em></template
+                  >
                 </p></template
               >
               <template

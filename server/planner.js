@@ -154,6 +154,7 @@ function retrieveDependency(row, resolved, flowVersions) {
       AUTO_TYPES.has(type) &&
       Boolean(retrieveName) &&
       (type !== "Flow" || Boolean(flowVersion)),
+    reason: row.reason,
     flowStatus: flowVersion?.Status,
     flowVersionNumber: flowVersion?.VersionNumber,
     cleanupOnly: type === "Flow" && flowVersion?.Status !== "Active"
@@ -262,7 +263,12 @@ async function reportDependencies(fullName, targetType, runQuery = query) {
         MetadataComponentId: report.Id,
         MetadataComponentName: report.Name,
         MetadataComponentType: "Report",
-        ...(retrieveName ? { ResolvedFullName: retrieveName } : {})
+        ...(retrieveName
+          ? { ResolvedFullName: retrieveName }
+          : {
+              reason:
+                "This report is in a private/personal folder, which Salesforce's Metadata API cannot retrieve or update. Move it to a public or shared folder in Salesforce, then retry - it will then be auto-fixable."
+            })
       };
     })
   );
