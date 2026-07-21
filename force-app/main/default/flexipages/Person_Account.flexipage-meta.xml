@@ -69,6 +69,12 @@
                 <identifier>RecordAccount_Contact__cField</identifier>
             </fieldInstance>
         </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldItem>Record.Level__c</fieldItem>
+                <identifier>RecordLevel__cField</identifier>
+            </fieldInstance>
+        </itemInstances>
         <name>Facet-bfd1ba90-c017-43e3-ac90-3e4794c312fa</name>
         <type>Facet</type>
     </flexiPageRegions>
