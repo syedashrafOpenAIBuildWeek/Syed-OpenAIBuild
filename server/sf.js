@@ -6,7 +6,8 @@ import { AppError } from "./errors.js";
 import { config, projectRoot } from "./config.js";
 
 const API_NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
-const COMPONENT_NAME = /^[A-Za-z0-9_./ ()-]+$/;
+// $ is included for Salesforce's reserved folder names (e.g. "unfiled$public").
+const COMPONENT_NAME = /^[A-Za-z0-9_./ ()$-]+$/;
 
 export function assertApiName(value, label = "API name") {
   if (!API_NAME.test(value || ""))

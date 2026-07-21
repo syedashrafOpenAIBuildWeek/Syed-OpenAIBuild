@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import crypto from "node:crypto";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -6,6 +7,7 @@ import { assertApiName, describe, describeReport, query, retrieve } from "./sf.j
 import { removeReferences } from "./openai.js";
 import { createRun, persist } from "./store.js";
 import { AppError } from "./errors.js";
+import { projectRoot } from "./config.js";
 import { snapshotMetadataFromWorkspace } from "./workspace.js";
 
 const execFileAsync = promisify(execFile);
@@ -200,14 +202,37 @@ async function flexiPageDependencies(fullName, targetType, runQuery = query) {
   return matches.filter(Boolean);
 }
 
+// Reports in private/personal folders can't be retrieved via the Metadata
+// API at all (no folder prefix resolves them); reports in any real folder
+// retrieve fine as long as SOME "/" prefix is present - the CLI resolves by
+// report developer name, largely ignoring the folder segment itself. Rather
+// than guess, do a real throwaway retrieve to confirm before trusting it.
+async function probeReportRetrieveName(developerName) {
+  const candidate = `unfiled$public/${developerName}`;
+  // sf project retrieve start requires --output-dir to be inside the
+  // project root - os.tmpdir() fails with OutputDirOutsideProjectError.
+  const probeDir = path.join(
+    projectRoot,
+    "safe-delete-runs",
+    "report-probes",
+    crypto.randomUUID()
+  );
+  try {
+    await retrieve([{ type: "Report", name: candidate }], probeDir);
+    const files = await walk(probeDir);
+    return files.length ? candidate : null;
+  } catch {
+    return null;
+  } finally {
+    await fs.rm(probeDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 // Salesforce's own "Where is this used?" surfaces Report references that
 // MetadataComponentDependency silently omits - checked empirically, not
 // documented. Scanning every report's describe() is the only general way to
 // catch this rather than hoping each newly-discovered gap gets special-cased
-// by hand. Left non-autoFixable (no ResolvedFullName) since Report isn't
-// Tooling-API queryable, so there's no reliable retrieve name to resolve to -
-// resolveRetrieveNames' existing fallback correctly routes these to manual
-// review instead of guessing at a fix.
+// by hand.
 async function reportDependencies(fullName, targetType, runQuery = query) {
   if (targetType !== "field") return [];
   const fieldApiName = fullName.slice(fullName.lastIndexOf(".") + 1);
@@ -228,10 +253,16 @@ async function reportDependencies(fullName, targetType, runQuery = query) {
         return null;
       }
       if (!JSON.stringify(described).includes(fieldApiName)) return null;
+      // Non-autoFixable (no ResolvedFullName) whenever the retrieve probe
+      // fails - e.g. reports still in a private/personal folder. That
+      // correctly routes to manual review instead of guessing at a fix
+      // for something we can't actually retrieve.
+      const retrieveName = await probeReportRetrieveName(report.DeveloperName);
       return {
         MetadataComponentId: report.Id,
         MetadataComponentName: report.Name,
-        MetadataComponentType: "Report"
+        MetadataComponentType: "Report",
+        ...(retrieveName ? { ResolvedFullName: retrieveName } : {})
       };
     })
   );
