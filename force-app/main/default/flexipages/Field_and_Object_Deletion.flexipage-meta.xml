@@ -13,6 +13,13 @@
                 </componentInstanceProperties>
                 <componentName>safeMetadataDelete</componentName>
                 <identifier>c_safeMetadataDelete</identifier>
+                <visibilityRule>
+                    <criteria>
+                        <leftValue>{!$User.Profile.Name}</leftValue>
+                        <operator>CONTAINS</operator>
+                        <rightValue>System Administrator</rightValue>
+                    </criteria>
+                </visibilityRule>
             </componentInstance>
         </itemInstances>
         <name>main</name>
