@@ -1,4 +1,4 @@
-Removed the complete input assignment referencing Account.NumberofLocations__c while preserving the remaining flow structure and field updates.
+Removed Account.Account_Check__c from the owning Salesforce metadata element.
 
 --- before/backup/flows/Account_Field_updates.flow-meta.xml
 +++ after/working/flows/Account_Field_updates.flow-meta.xml
@@ -6,9 +6,9 @@ Removed the complete input assignment referencing Account.NumberofLocations__c w
          <locationX>0</locationX>
          <locationY>0</locationY>
          <inputAssignments>
--            <field>NumberofLocations__c</field>
+-            <field>Account_Check__c</field>
 -            <value>
--                <elementReference>$Record.NumberofLocations__c</elementReference>
+-                <booleanValue>true</booleanValue>
 -            </value>
 -        </inputAssignments>
 -        <inputAssignments>

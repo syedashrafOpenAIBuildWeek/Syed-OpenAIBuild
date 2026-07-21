@@ -22,10 +22,6 @@
         <field>LAST_UPDATE</field>
     </columns>
     <columns>
-        <aggregateTypes>Sum</aggregateTypes>
-        <field>Account.Account_Check__c</field>
-    </columns>
-    <columns>
         <field>Account.Account_Date__c</field>
     </columns>
     <columns>

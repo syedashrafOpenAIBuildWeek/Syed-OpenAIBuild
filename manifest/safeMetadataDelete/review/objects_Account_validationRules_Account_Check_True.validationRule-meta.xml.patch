@@ -1,0 +1,13 @@
+Removed the validation rule file because its condition and error display field both depend on Account.Account_Check__c; retaining it would require an unrelated placeholder formula. This component will be deleted entirely rather than deployed empty.
+
+--- before/backup/objects/Account/validationRules/Account_Check_True.validationRule-meta.xml
++++ after/../../../../../../../dev/null
+@@ -1,8 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+-    <fullName>Account_Check_True</fullName>
+-    <active>true</active>
+-    <errorConditionFormula>Account_Check__c = false</errorConditionFormula>
+-    <errorDisplayField>Account_Check__c</errorDisplayField>
+-    <errorMessage>Account Checkbox should be checked.</errorMessage>
+-</ValidationRule>

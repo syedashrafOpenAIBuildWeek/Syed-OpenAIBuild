@@ -1,0 +1,15 @@
+Removed the complete report column referencing Account.Account_Check__c, including its Sum aggregate.
+
+--- before/backup/reports/unfiled$public/New_Accounts_Report_U4p.report-meta.xml
++++ after/working/reports/unfiled$public/New_Accounts_Report_U4p.report-meta.xml
+@@ -22,10 +22,6 @@
+         <field>LAST_UPDATE</field>
+     </columns>
+     <columns>
+-        <aggregateTypes>Sum</aggregateTypes>
+-        <field>Account.Account_Check__c</field>
+-    </columns>
+-    <columns>
+         <field>Account.Account_Date__c</field>
+     </columns>
+     <columns>

@@ -1,12 +1,12 @@
-Removed the assignment to the deleted Account.Account_Trigger__c field while preserving the remaining trigger logic.
+Removed the assignment to Account.Account_Check__c while preserving the trigger's remaining logic and structure.
 
 --- before/backup/triggers/AccountTrigger.trigger
 +++ after/working/triggers/AccountTrigger.trigger
 @@ -1,6 +1,5 @@
  trigger AccountTrigger on Account (before insert) {
      for (Account acc : Trigger.new) {
--        acc.Account_Trigger__c = 'Inserted';
          acc.TickerSymbol = 'Ticker';
+-        acc.Account_Check__c = true;
      }
  }
 \ No newline at end of file
