@@ -1,0 +1,55 @@
+<svg width="680" height="480" viewBox="0 0 680 480" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Safe Metadata Delete — system architecture</title>
+<style>
+  text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }
+  .th { font-size:14px; font-weight:600; }
+  .ts { font-size:12px; }
+  .box rect { fill:#f6f8fa; stroke:#8c959f; stroke-width:0.75; }
+  .box .th, .box .ts { fill:#24292f; }
+  .blue rect { fill:#ddf4ff; stroke:#0969da; stroke-width:0.75; }
+  .blue .th { fill:#0550ae; }
+  .blue .ts { fill:#0969da; }
+  .teal rect { fill:#d3f4ee; stroke:#0d7c66; stroke-width:0.75; }
+  .teal .th { fill:#075c48; }
+  .teal .ts { fill:#0d7c66; }
+  .arr { stroke:#8c959f; stroke-width:1.5; }
+</style>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#8c959f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<g class="box">
+  <rect x="220" y="40" width="240" height="56" rx="8"/>
+  <text class="th" x="340" y="58" text-anchor="middle" dominant-baseline="central">Admin</text>
+  <text class="ts" x="340" y="76" text-anchor="middle" dominant-baseline="central">Speaks or types a command</text>
+</g>
+
+<line x1="340" y1="96" x2="340" y2="156" class="arr" marker-end="url(#arrow)"/>
+
+<g class="blue">
+  <rect x="220" y="156" width="240" height="56" rx="8"/>
+  <text class="th" x="340" y="174" text-anchor="middle" dominant-baseline="central">Lightning Web Component</text>
+  <text class="ts" x="340" y="192" text-anchor="middle" dominant-baseline="central">Home Page, voice + text UI</text>
+</g>
+
+<line x1="340" y1="212" x2="340" y2="272" class="arr" marker-end="url(#arrow)"/>
+
+<g class="blue">
+  <rect x="220" y="272" width="240" height="56" rx="8"/>
+  <text class="th" x="340" y="290" text-anchor="middle" dominant-baseline="central">Node/Express backend</text>
+  <text class="ts" x="340" y="308" text-anchor="middle" dominant-baseline="central">Local machine, exposed via tunnel</text>
+</g>
+
+<path class="arr" marker-end="url(#arrow)" fill="none" d="M340 328 L340 355 L220 355 L220 388"/>
+<path class="arr" marker-end="url(#arrow)" fill="none" d="M340 328 L340 355 L460 355 L460 388"/>
+
+<g class="teal">
+  <rect x="110" y="388" width="220" height="56" rx="8"/>
+  <text class="th" x="220" y="406" text-anchor="middle" dominant-baseline="central">Salesforce APIs</text>
+  <text class="ts" x="220" y="424" text-anchor="middle" dominant-baseline="central">Tooling, REST, Metadata</text>
+</g>
+
+<g class="teal">
+  <rect x="350" y="388" width="220" height="56" rx="8"/>
+  <text class="th" x="460" y="406" text-anchor="middle" dominant-baseline="central">OpenAI GPT-5.6</text>
+  <text class="ts" x="460" y="424" text-anchor="middle" dominant-baseline="central">Parses intent, edits XML</text>
+</g>
+</svg>

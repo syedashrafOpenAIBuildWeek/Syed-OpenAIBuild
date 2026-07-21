@@ -11,7 +11,12 @@ Planning is non-destructive: describe targets, block standard metadata, count ob
 - **Salesforce** — Tooling API, REST API, Metadata API (retrieve/deploy/destructive delete).
 - **OpenAI GPT-5.6** — parses the command into structured intent, edits XML/report JSON for auto-fixable dependencies.
 
+![Architecture](docs/architecture.svg)
+
 Flow: parse intent → classify (block standard) → scan dependencies → hard-block on manual-review or incoming relationships → generate diffs → human approval → validate deploy → deploy fixes → destructive delete (target + any fully-emptied dependents) → sync to local project. Rollback available on any post-approval failure.
+
+![Planning pipeline](docs/planning-pipeline.svg)
+![Approval pipeline](docs/approval-pipeline.svg)
 
 ## Setup
 
