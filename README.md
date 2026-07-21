@@ -4,6 +4,15 @@ A review-first Salesforce admin tool for deleting custom fields and objects from
 
 Planning is non-destructive: describe targets, block standard metadata, count object records, scan Tooling API dependencies, retrieve backups, and prepare AI-generated dependency-removal diffs. A one-time token and explicit approval click are required before deployment.
 
+## Architecture
+
+- **LWC** (`safeMetadataDelete`) — Home Page component. Voice via browser `SpeechRecognition`, or text.
+- **Backend** (`server/`) — Node/Express, local machine, exposed via a Cloudflare tunnel. Reuses the existing `sf` CLI session, no OAuth/Connected App.
+- **Salesforce** — Tooling API, REST API, Metadata API (retrieve/deploy/destructive delete).
+- **OpenAI GPT-5.6** — parses the command into structured intent, edits XML/report JSON for auto-fixable dependencies.
+
+Flow: parse intent → classify (block standard) → scan dependencies → hard-block on manual-review or incoming relationships → generate diffs → human approval → validate deploy → deploy fixes → destructive delete (target + any fully-emptied dependents) → sync to local project. Rollback available on any post-approval failure.
+
 ## Setup
 
 1. Copy `.env.example` to `.env` and set `OPENAI_API_KEY`.
@@ -23,7 +32,7 @@ Apex, Flow, and unknown dependencies stop that target. Layout, ListView, Report,
 
 `POST /api/runs/:id/approve` requires the random token and `confirmed: true`. It dry-run deploys dependency fixes, deploys them, then performs a separate post-destructive deployment. On a post-backup failure, `POST /api/runs/:id/rollback` redeploys the backup.
 
-Run artifacts are under gitignored `.safe-delete/runs/`. Restarting the backend intentionally invalidates pending approvals.
+Run artifacts are under gitignored `safe-delete-runs/`. Restarting the backend intentionally invalidates pending approvals.
 
 ## Verification
 
