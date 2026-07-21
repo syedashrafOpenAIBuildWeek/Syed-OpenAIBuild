@@ -2,22 +2,34 @@
 # Checks whether the Cloudflare tunnel is alive; if not, restarts it and
 # repoints the org (CSP Trusted Site + Home Page backendUrl) at the new URL.
 # Run this any time you see "Failed to Fetch" in the app.
+#
+# Portable to any org/machine: reads ORG and TOKEN from .env, resolves the
+# CSP Trusted Site record by name (not a hardcoded Id), and derives the
+# project path from the script's own location.
 set -e
 
-TOKEN="673a298a25ef70fb7d201532b733c3f640bc6a895086d30b"
-ORG="hackathon-org"
-CSP_ID="08ydL000004Pq9BQAS"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$PROJECT_DIR"
+
+if [ -f .env ]; then
+  ORG=$(grep -E '^SF_ORG_ALIAS=' .env | cut -d= -f2-)
+  TOKEN=$(grep -E '^BACKEND_API_TOKEN=' .env | cut -d= -f2-)
+fi
+ORG="${ORG:-hackathon-org}"
+CSP_DEVELOPER_NAME="Safe_Delete_Backend"
 FLEXIPAGE_NAME="Field_and_Object_Deletion"
-PROJECT_DIR="/Users/a1989/Desktop/OpenAIDev"
-TUNNEL_LOG="/tmp/cloudflared3.log"
+TUNNEL_LOG="/tmp/cloudflared-safe-metadata-delete.log"
 FLEXIPAGE_FILE="$PROJECT_DIR/force-app/main/default/flexipages/$FLEXIPAGE_NAME.flexipage-meta.xml"
 
-cd "$PROJECT_DIR"
+TOKEN_HEADER=()
+if [ -n "$TOKEN" ]; then
+  TOKEN_HEADER=(-H "X-Backend-Token: $TOKEN")
+fi
 
 CURRENT_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' "$TUNNEL_LOG" 2>/dev/null | tail -1)
 STATUS="000"
 if [ -n "$CURRENT_URL" ]; then
-  STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -H "X-Backend-Token: $TOKEN" "$CURRENT_URL/api/health" 2>/dev/null || echo "000")
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${TOKEN_HEADER[@]}" "$CURRENT_URL/api/health" 2>/dev/null || echo "000")
 fi
 
 if [ "$STATUS" = "200" ]; then
@@ -33,7 +45,7 @@ sleep 1
 
 if ! pgrep -f "node server/index.js" > /dev/null; then
   echo "Backend isn't running either - starting it..."
-  nohup npm run backend > /tmp/backend.log 2>&1 &
+  nohup npm run backend > /tmp/safe-metadata-delete-backend.log 2>&1 &
   disown
   sleep 2
 fi
@@ -50,9 +62,18 @@ if [ -z "$NEW_URL" ]; then
 fi
 echo "New tunnel: $NEW_URL"
 
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 -H "X-Backend-Token: $TOKEN" "$NEW_URL/api/health")
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${TOKEN_HEADER[@]}" "$NEW_URL/api/health")
 if [ "$STATUS" != "200" ]; then
   echo "ERROR: new tunnel isn't responding (status: $STATUS). Try running this again in a few seconds."
+  exit 1
+fi
+
+echo "Looking up the CSP Trusted Site record..."
+CSP_ID=$(sf data query --target-org "$ORG" \
+  --query "SELECT Id FROM CspTrustedSite WHERE DeveloperName = '$CSP_DEVELOPER_NAME'" \
+  --json 2>/dev/null | python3 -c "import json,sys; r=json.load(sys.stdin)['result']['records']; print(r[0]['Id'] if r else '')")
+if [ -z "$CSP_ID" ]; then
+  echo "ERROR: no CspTrustedSite named '$CSP_DEVELOPER_NAME' in org '$ORG'. Deploy force-app first (see README)."
   exit 1
 fi
 
